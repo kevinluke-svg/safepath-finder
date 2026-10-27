@@ -1,0 +1,7 @@
+incident_id,latitude,longitude,category,timestamp,severity,spatial_precision,source,is_fixture
+syn-c001,12.9312,77.5852,assault,2026-05-14T21:30:00Z,high,block_level,Bengaluru Research Demonstration,true
+syn-c002,12.9324,77.5851,theft,2026-06-18T18:15:00Z,medium,block_level,Bengaluru Research Demonstration,true
+syn-c003,12.9331,77.5875,harassment,2026-07-22T22:45:00Z,medium,block_level,Bengaluru Research Demonstration,true
+syn-c004,12.9318,77.5853,vandalism,2026-08-05T01:10:00Z,low,block_level,Bengaluru Research Demonstration,true
+syn-c005,12.9328,77.5880,burglary,2026-09-12T19:20:00Z,medium,block_level,Bengaluru Research Demonstration,true
+syn-c006,12.9305,77.5851,robbery,2026-10-02T23:05:00Z,high,block_level,Bengaluru Research Demonstration,true

@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+node_modules/
+.DS_Store
+
+# Local databases and generated geospatial cache
+backend/safepath.db
+backend/data/cache/
+backend/data/*.graphml
+backend/data/*.graphml.*
+backend/data/routing_evaluation_results.json
