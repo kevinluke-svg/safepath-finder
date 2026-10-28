@@ -67,6 +67,24 @@ def run_seed() -> None:
         db.close()
 
 
+def refresh_network(force: bool = True) -> None:
+    """Download and refresh the genuine OpenStreetMap pedestrian network for the active study area."""
+    from app.geospatial.study_area import StudyArea
+    from app.geospatial.network_adapter import OsmNetworkAdapter
+
+    study_area = StudyArea.from_settings()
+    print(f"Retrieving genuine pedestrian street network for '{study_area.name}' [bbox: {study_area.bbox}] via OSMnx...")
+    adapter = OsmNetworkAdapter()
+    result = adapter.get_pedestrian_network(study_area, force_reload=force)
+    print(f"Network successfully installed and cached:")
+    print(f"  Study Area: {result.study_area_name}")
+    print(f"  Nodes: {result.nodes_count}")
+    print(f"  Edges: {result.edges_count}")
+    print(f"  Connected components: {result.connected_components_count}")
+    print(f"  Cache path: {result.cache_path}")
+    print(f"  Attribution: {result.attribution}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="SafePath Finder Administrative CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -80,11 +98,17 @@ def main():
     # seed
     subparsers.add_parser("seed", help="Seed database with pilot data sources and segments")
 
+    # refresh-network
+    net_parser = subparsers.add_parser("refresh-network", help="Download and cache genuine OSM pedestrian network")
+    net_parser.add_argument("--force", action="store_true", default=True, help="Force re-download from Overpass API")
+
     args = parser.parse_args()
     if args.command == "create-admin":
         create_admin(args.email, args.name, args.password)
     elif args.command == "seed":
         run_seed()
+    elif args.command == "refresh-network":
+        refresh_network(args.force)
 
 
 if __name__ == "__main__":

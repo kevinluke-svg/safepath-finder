@@ -78,26 +78,27 @@ class FacilityRouter:
         """
         Maps each facility point to the nearest node in the pedestrian graph.
         Returns list of (FacilityPoint, nearest_node_id, snap_distance_meters).
+        Uses STRtree for sub-millisecond snapping.
         """
         snapped = []
-        if len(self.graph.nodes) == 0:
+        node_list = list(self.graph.nodes)
+        if not node_list:
             return snapped
+
+        from shapely.geometry import Point
+        from shapely import STRtree
+
+        pts = [Point(self.graph.nodes[n]["x"], self.graph.nodes[n]["y"]) for n in node_list]
+        tree = STRtree(pts)
 
         for fac in facilities:
             try:
-                # Find nearest node by minimum haversine distance
-                best_node = None
-                best_dist = float("inf")
-                for node_id, data in self.graph.nodes(data=True):
-                    n_lat = data.get("y", 0.0)
-                    n_lon = data.get("x", 0.0)
-                    d = self.haversine_distance_meters(fac.latitude, fac.longitude, n_lat, n_lon)
-                    if d < best_dist:
-                        best_dist = d
-                        best_node = node_id
-
-                if best_node is not None:
-                    snapped.append((fac, int(best_node), float(best_dist)))
+                idx = tree.nearest(Point(fac.longitude, fac.latitude))
+                best_node = node_list[idx]
+                n_lat = self.graph.nodes[best_node]["y"]
+                n_lon = self.graph.nodes[best_node]["x"]
+                best_dist = self.haversine_distance_meters(fac.latitude, fac.longitude, n_lat, n_lon)
+                snapped.append((fac, int(best_node), float(best_dist)))
             except Exception as e:
                 logger.warning(f"Could not snap facility {fac.id} ({fac.name}) to network: {e}")
         return snapped

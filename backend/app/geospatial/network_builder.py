@@ -355,29 +355,29 @@ def build_bengaluru_pilot_network() -> nx.MultiDiGraph:
 
 def ensure_pilot_network_cached(study_area: StudyArea, force_reload: bool = False) -> str:
     """
-    Ensures the high-resolution pilot pedestrian network GraphML file is persisted in cache.
-    Returns the absolute path to the GraphML file.
+    Reference utility for test fixtures.
+    NOTE: Production routing uses genuine OpenStreetMap data via OsmNetworkAdapter.
+    This helper only generates a mock graph file for testing if genuine OSM data is not present.
     """
     cache_dir = settings.GEOSPATIAL_CACHE_DIR
     os.makedirs(cache_dir, exist_ok=True)
     graph_path = os.path.join(cache_dir, f"pedestrian_{study_area.slug}.graphml")
     meta_path = os.path.join(cache_dir, f"pedestrian_{study_area.slug}_meta.json")
 
-    # If force_reload is true or cache doesn't exist or is older low-resolution skeleton (<40 nodes)
-    rebuild_needed = force_reload or not os.path.isfile(graph_path)
-    if not rebuild_needed:
+    # If genuine OSM network is already cached, NEVER overwrite it with the manual test fixture
+    if os.path.isfile(meta_path):
         try:
-            meta = {}
-            if os.path.isfile(meta_path):
-                with open(meta_path, "r", encoding="utf-8") as f:
-                    meta = json.load(f)
-            if meta.get("nodesCount", 0) < 71:
-                rebuild_needed = True
+            with open(meta_path, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+            if meta.get("isRealOsmNetwork") or "OpenStreetMap" in meta.get("attribution", "") or meta.get("nodesCount", 0) >= 500:
+                logger.info("Genuine OpenStreetMap network already installed in cache. Preserving real street data.")
+                return graph_path
         except Exception:
-            rebuild_needed = True
+            pass
 
+    rebuild_needed = force_reload or not os.path.isfile(graph_path)
     if rebuild_needed:
-        logger.info(f"Generating realistic high-resolution pilot pedestrian network for {study_area.name}...")
+        logger.info(f"Generating reference pilot pedestrian network for testing {study_area.name}...")
         graph = build_bengaluru_pilot_network()
         ox.save_graphml(graph, graph_path)
 
@@ -386,11 +386,12 @@ def ensure_pilot_network_cached(study_area: StudyArea, force_reload: bool = Fals
             "nodesCount": len(graph.nodes),
             "edgesCount": len(graph.edges),
             "retrievedAt": datetime.now(timezone.utc).isoformat(),
-            "attribution": "© SafePath Research Corridor Network (OSMnx/GraphML Reference)"
+            "attribution": "© SafePath Research Corridor Network (Test Fixture)",
+            "isRealOsmNetwork": False
         }
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2)
 
-        logger.info(f"Persisted high-resolution pilot pedestrian network to {graph_path} ({len(graph.nodes)} nodes, {len(graph.edges)} edges).")
+        logger.info(f"Persisted test pedestrian network to {graph_path} ({len(graph.nodes)} nodes, {len(graph.edges)} edges).")
 
     return graph_path

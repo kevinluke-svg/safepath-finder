@@ -881,92 +881,10 @@
         }
       }
 
-      // Offline / Demo Fallback Mode: Dynamic calculation for arbitrary locations
-      // 1. Boundary check: [S: 12.9200, W: 77.5700, N: 12.9850, E: 77.6200]
-      if (originCoordinates && (originCoordinates[0] < 12.92 || originCoordinates[0] > 12.985 || originCoordinates[1] < 77.57 || originCoordinates[1] > 77.62)) {
-        throw new Error(`Origin '${origin}' (${originCoordinates[0].toFixed(5)}, ${originCoordinates[1].toFixed(5)}) is outside configured study area 'Bengaluru Pilot Corridor' [S: 12.92, W: 77.57, N: 12.985, E: 77.62]. Routing requests outside configured coverage cannot be processed without fabricating paths.`);
-      }
-      if (destinationCoordinates && (destinationCoordinates[0] < 12.92 || destinationCoordinates[0] > 12.985 || destinationCoordinates[1] < 77.57 || destinationCoordinates[1] > 77.62)) {
-        throw new Error(`Destination '${destination}' (${destinationCoordinates[0].toFixed(5)}, ${destinationCoordinates[1].toFixed(5)}) is outside configured study area 'Bengaluru Pilot Corridor' [S: 12.92, W: 77.57, N: 12.985, E: 77.62]. Routing requests outside configured coverage cannot be processed without fabricating paths.`);
-      }
-
-      const origLat = originCoordinates ? originCoordinates[0] : 12.9257;
-      const origLon = originCoordinates ? originCoordinates[1] : 77.5833;
-      const destLat = destinationCoordinates ? destinationCoordinates[0] : 12.9460;
-      const destLon = destinationCoordinates ? destinationCoordinates[1] : 77.5844;
-
-      // Approximate geodesic distance in meters
-      const dLat = (destLat - origLat) * 111139.0;
-      const dLon = (destLon - origLon) * 108390.0;
-      const directDist = Math.max(Math.round(Math.sqrt(dLat * dLat + dLon * dLon)), 120);
-
-      // Interpolate realistic walking street grid turns (following avenues and cross-streets, never diagonal straight lines)
-      const latMid = origLat + (destLat - origLat) * 0.55;
-      const lonMid = origLon + (destLon - origLon) * 0.45;
-      
-      // Safety-prioritized path: follows well-lit main avenues with street turn
-      const safetyGeom = [
-        [origLat, origLon],
-        [latMid + 0.0003, origLon],
-        [latMid + 0.0003, destLon],
-        [destLat, destLon]
-      ];
-
-      // Balanced path: follows secondary commercial street with intermediate turn
-      const balancedGeom = [
-        [origLat, origLon],
-        [latMid, origLon + 0.0002],
-        [latMid, destLon],
-        [destLat, destLon]
-      ];
-
-      // Shortest path: follows direct street corner grid step (never straight line across buildings)
-      const shortestGeom = [
-        [origLat, origLon],
-        [origLat, lonMid],
-        [destLat, lonMid],
-        [destLat, destLon]
-      ];
-
-      const routes = JSON.parse(JSON.stringify(SAMPLE_ROUTES));
-      routes['route-evidence'].geometry = safetyGeom;
-      routes['route-evidence'].distanceMeters = Math.round(directDist * 1.22);
-      routes['route-evidence'].durationSeconds = Math.round((directDist * 1.22) / 1.2);
-
-      routes['route-balanced'].geometry = balancedGeom;
-      routes['route-balanced'].distanceMeters = Math.round(directDist * 1.15);
-      routes['route-balanced'].durationSeconds = Math.round((directDist * 1.15) / 1.2);
-
-      routes['route-shortest'].geometry = shortestGeom;
-      routes['route-shortest'].distanceMeters = Math.round(directDist * 1.08);
-      routes['route-shortest'].durationSeconds = Math.round((directDist * 1.08) / 1.2);
-
-      // Weight adjustments based on user preferences
-      const preferLighting = preferences.preferLighting ?? true;
-      const preferActivity = preferences.preferActivity ?? true;
-      const avoidUnknown = preferences.avoidUnknown ?? true;
-
-      let rankingReason = '';
-      if (preferLighting && avoidUnknown) {
-        rankingReason = 'Evidence-led route ranks #1 because lighting evidence and low tolerance for unmapped segments are prioritized.';
-      } else if (!preferLighting && !avoidUnknown) {
-        rankingReason = 'Shortest direct route ranks #1 because travel time is prioritized over evidence availability.';
-      } else {
-        rankingReason = 'Balanced route ranks well as a compromise between travel distance and evidence coverage.';
-      }
-
-      return {
-        origin,
-        destination,
-        walkingMode,
-        timestamp: new Date().toISOString(),
-        rankingReason,
-        routes: [
-          routes['route-evidence'],
-          routes['route-balanced'],
-          routes['route-shortest']
-        ]
-      };
+      // When live mode is not active or backend is unreachable, do not synthesize or interpolate fake paths
+      throw new Error(
+        `Live pedestrian routing backend (FastAPI on port 8001) is required to calculate genuine walking routes through the OpenStreetMap street network. SafePath Finder does not synthesize or interpolate artificial route paths.`
+      );
     },
 
     // ----------------------------------------------------
@@ -988,18 +906,10 @@
           });
           if (res.ok) return await res.json();
         } catch (e) {
-          console.warn('Live getRouteSegments failed, checking memory routes:', e);
+          console.warn('Live getRouteSegments failed:', e);
         }
       }
 
-      if (SAMPLE_ROUTES[routeId]) {
-        const route = SAMPLE_ROUTES[routeId];
-        return {
-          routeId: route.id,
-          routeName: route.name,
-          segments: route.segments || []
-        };
-      }
       return {
         routeId: routeId,
         routeName: routeId,

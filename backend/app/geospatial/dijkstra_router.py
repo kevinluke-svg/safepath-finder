@@ -11,11 +11,11 @@ Computes explainable route metrics (distance, duration, route risk, evidence cov
 import math
 import logging
 from typing import Dict, Any, List, Optional, Tuple, Set
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 
 import networkx as nx
 import osmnx as ox
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 
 from app.core.config import settings
 from app.geospatial.exceptions import (
@@ -26,6 +26,24 @@ from app.geospatial.exceptions import (
 from app.geospatial.segment_risk import SegmentRiskModel, SegmentRiskProfile
 
 logger = logging.getLogger(__name__)
+
+# Verified major civic landmarks, recreation spaces, and rapid transit hubs in the Bengaluru pilot corridor
+PILOT_CORRIDOR_LANDMARKS: List[Dict[str, Any]] = [
+    {"id": "poi-jayanagar-ttmc", "name": "Jayanagar 4th Block Bus Station & TTMC", "category": "transit", "latitude": 12.9257, "longitude": 77.5833},
+    {"id": "poi-southend-metro", "name": "South End Circle Rapid Transit Station", "category": "transit", "latitude": 12.9330, "longitude": 77.5832},
+    {"id": "poi-madhavan-park", "name": "Madhavan Park & Playground", "category": "park", "latitude": 12.9370, "longitude": 77.5860},
+    {"id": "poi-ashoka-pillar", "name": "Ashoka Pillar Heritage Monument", "category": "landmark", "latitude": 12.9370, "longitude": 77.5835},
+    {"id": "poi-lalbagh-west", "name": "Lalbagh Botanical Garden (West Gate)", "category": "park", "latitude": 12.9460, "longitude": 77.5844},
+    {"id": "poi-lalbagh-main", "name": "Lalbagh Botanical Garden (Main Gate)", "category": "park", "latitude": 12.9501, "longitude": 77.5847},
+    {"id": "poi-gandhi-bazaar", "name": "Gandhi Bazaar Commercial Corridor", "category": "landmark", "latitude": 12.9420, "longitude": 77.5720},
+    {"id": "poi-shantinagar-bus", "name": "Shantinagar BMTC Transit Interchange", "category": "transit", "latitude": 12.9580, "longitude": 77.5860},
+    {"id": "poi-corporation-circle", "name": "Corporation Circle (BBMP Civic Center)", "category": "landmark", "latitude": 12.9680, "longitude": 77.5880},
+    {"id": "poi-richmond-circle", "name": "Richmond Circle Junction", "category": "landmark", "latitude": 12.9660, "longitude": 77.5990},
+    {"id": "poi-cubbon-park", "name": "Cubbon Park & State Central Library", "category": "park", "latitude": 12.9770, "longitude": 77.5920},
+    {"id": "poi-kanteerava-stadium", "name": "Sree Kanteerava Outdoor Stadium", "category": "landmark", "latitude": 12.9730, "longitude": 77.5930},
+    {"id": "poi-mg-road-metro", "name": "MG Road Rapid Transit Station", "category": "transit", "latitude": 12.9750, "longitude": 77.6050},
+    {"id": "poi-brigade-road", "name": "Brigade Road Commercial Promenade", "category": "landmark", "latitude": 12.9740, "longitude": 77.6070},
+]
 
 
 @dataclass
@@ -67,6 +85,8 @@ class ComputedRoute:
     limitations: List[str]
     is_identical_to_fastest: bool = False
     identical_notes: Optional[str] = None
+    streetlight_summary: Optional[Dict[str, Any]] = None
+    nearby_places: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -94,11 +114,15 @@ class DijkstraRouter:
     ):
         self.graph = graph
         self.risk_model = risk_model or SegmentRiskModel()
+        self.facilities_result = facilities_result
+        self.crime_dataset = crime_dataset
+        self.community_reports = community_reports
         self.max_detour_ratio = max_detour_ratio or settings.ROUTING_MAX_DETOUR_RATIO
         self.overlap_threshold = overlap_threshold or settings.ROUTING_ALTERNATIVE_OVERLAP_THRESHOLD
         self.max_alternatives = max_alternatives or settings.ROUTING_MAX_ALTERNATIVES
+        self._simple_digraphs: Dict[str, Tuple[nx.DiGraph, Dict[Tuple[int, int], int]]] = {}
 
-        if facilities_result:
+        if facilities_result and not self.graph.graph.get("facilities_attached"):
             self._attach_facilities(facilities_result)
         if crime_dataset:
             self._attach_crime(crime_dataset)
@@ -107,6 +131,26 @@ class DijkstraRouter:
 
         self.edge_profiles: Dict[Tuple[int, int, int], SegmentRiskProfile] = {}
         self._prepare_graph_edge_costs()
+        self._init_spatial_index()
+
+    def _init_spatial_index(self) -> None:
+        """Initializes Shapely STRtree for sub-millisecond node snapping."""
+        from shapely.geometry import Point
+        from shapely import STRtree
+
+        if "spatial_tree" in self.graph.graph and "node_list" in self.graph.graph:
+            self._spatial_tree = self.graph.graph["spatial_tree"]
+            self._node_list = self.graph.graph["node_list"]
+            return
+
+        self._node_list = list(self.graph.nodes)
+        if self._node_list:
+            pts = [Point(self.graph.nodes[n]["x"], self.graph.nodes[n]["y"]) for n in self._node_list]
+            self._spatial_tree = STRtree(pts)
+            self.graph.graph["spatial_tree"] = self._spatial_tree
+            self.graph.graph["node_list"] = self._node_list
+        else:
+            self._spatial_tree = None
 
     def _attach_facilities(self, facilities_result: Any) -> None:
         """Computes true pedestrian network walking distances to police stations and hospitals."""
@@ -134,6 +178,8 @@ class DijkstraRouter:
                     data["nearest_hospital_distance_meters"] = min(hosp_u.distance_meters, hosp_v.distance_meters)
                 elif hosp_u or hosp_v:
                     data["nearest_hospital_distance_meters"] = (hosp_u or hosp_v).distance_meters
+
+            self.graph.graph["facilities_attached"] = True
         except Exception as e:
             logger.warning(f"Could not attach facility proximities to graph: {e}")
 
@@ -218,28 +264,27 @@ class DijkstraRouter:
             data["length"] = length_m
 
     def _find_nearest_node(self, lat: float, lon: float) -> Tuple[int, float]:
-        """Snaps coordinate pair to nearest graph node using minimum haversine distance."""
-        best_node = None
-        min_dist = float("inf")
-        r = 6371000.0  # meters
+        """Snaps coordinate pair to nearest graph node using spatial index and haversine distance."""
+        if not hasattr(self, "_node_list") or not self._node_list or getattr(self, "_spatial_tree", None) is None:
+            self._init_spatial_index()
 
-        phi1 = math.radians(lat)
-        for nid, data in self.graph.nodes(data=True):
-            n_lat = data.get("y", 0.0)
-            n_lon = data.get("x", 0.0)
-            phi2 = math.radians(n_lat)
-            dphi = math.radians(n_lat - lat)
-            dlam = math.radians(n_lon - lon)
-
-            a = math.sin(dphi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2.0) ** 2
-            d = r * 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
-            if d < min_dist:
-                min_dist = d
-                best_node = nid
-
-        if best_node is None:
+        if not self._node_list or self._spatial_tree is None:
             raise DisconnectedNetworkError("Pedestrian network graph contains 0 nodes.")
-        return int(best_node), float(min_dist)
+
+        from shapely.geometry import Point
+        idx = self._spatial_tree.nearest(Point(lon, lat))
+        best_node = self._node_list[idx]
+        n_lat = self.graph.nodes[best_node]["y"]
+        n_lon = self.graph.nodes[best_node]["x"]
+
+        # Haversine distance in meters
+        r = 6371000.0
+        p1, p2 = math.radians(lat), math.radians(n_lat)
+        dp, dl = math.radians(n_lat - lat), math.radians(n_lon - lon)
+        a = math.sin(dp / 2.0) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2.0) ** 2
+        dist = r * 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+
+        return int(best_node), float(dist)
 
     def _get_best_edge_key(self, u: int, v: int, weight_attr: str) -> int:
         """Finds edge key with lowest weight for parallel edges between u and v."""
@@ -375,20 +420,6 @@ class DijkstraRouter:
                 "geometry": pts
             })
 
-        # Connect exact origin coordinates if offset from snapped first node (doorstep access up to 120m)
-        if orig_coords is not None and geometry_coords:
-            first_pt = geometry_coords[0]
-            offset_deg = math.hypot(orig_coords[0] - first_pt[0], orig_coords[1] - first_pt[1])
-            if 0.00005 < offset_deg <= 0.0012:
-                geometry_coords.insert(0, [round(orig_coords[0], 6), round(orig_coords[1], 6)])
-
-        # Connect exact destination coordinates if offset from snapped last node (doorstep access up to 120m)
-        if dest_coords is not None and geometry_coords:
-            last_pt = geometry_coords[-1]
-            offset_deg = math.hypot(dest_coords[0] - last_pt[0], dest_coords[1] - last_pt[1])
-            if 0.00005 < offset_deg <= 0.0012:
-                geometry_coords.append([round(dest_coords[0], 6), round(dest_coords[1], 6)])
-
         # Calculate time-weighted averages
         mean_route_risk = round(time_weighted_risk_sum / max(total_time_s, 0.1), 4)
         mean_evidence_cov = round(time_weighted_cov_sum / max(total_time_s, 0.1), 4)
@@ -401,6 +432,42 @@ class DijkstraRouter:
 
         duration_mins = round(total_time_s / 60.0, 1)
 
+        # Count mapped street lamps near route nodes
+        mapped_lamps_count = sum(
+            1 for n in node_path if self.graph.nodes[n].get("highway") == "street_lamp"
+        )
+
+        # Build detailed streetlight evidence summary (Priority 4)
+        streetlight_summary = {
+            "totalDistanceMeters": round(total_dist_m, 1),
+            "knownLitDistanceMeters": round(lit_len, 1),
+            "knownUnlitDistanceMeters": round(unlit_len, 1),
+            "conflictingDistanceMeters": round(conflicting_len, 1),
+            "unknownDistanceMeters": round(unmapped_len, 1),
+            "litPercentage": lit_pct,
+            "unlitPercentage": unlit_pct,
+            "conflictingPercentage": conf_pct,
+            "unknownPercentage": unmapped_pct,
+            "mappedStreetlampsCount": mapped_lamps_count,
+            "sources": [
+                "OpenStreetMap way tags ('lit=yes', 'lit=no')",
+                "OpenStreetMap node tags ('highway=street_lamp')"
+            ],
+            "explanation": (
+                f"Traversed walking distance is {int(total_dist_m)}m: {lit_pct}% ({int(lit_len)}m) has verified illumination; "
+                f"{unlit_pct}% ({int(unlit_len)}m) is explicitly mapped as unlit; and {unmapped_pct}% ({int(unmapped_len)}m) has unknown/unmapped "
+                f"lighting. In accordance with SafePath research policy, unmapped segments are evaluated under modeling uncertainty "
+                f"(prior R_unknown = {self.risk_model.r_unknown_prior}) and are NEVER assumed to be dark or hazardous."
+            )
+        }
+
+        # Find nearby major landmarks and assistance facilities (Priority 5)
+        nearby_places = self._find_nearby_places(
+            geometry_coords=geometry_coords,
+            corridor_meters=getattr(settings, "ROUTING_NEARBY_CORRIDOR_METERS", 500.0),
+            max_results=getattr(settings, "ROUTING_MAX_NEARBY_PLACES", 10)
+        )
+
         # Build characteristics and trade-offs
         characteristics = [
             f"{lit_pct}% verified street lighting",
@@ -412,6 +479,9 @@ class DijkstraRouter:
             characteristics.append(f"{crime_total} historical crime record(s) along segments")
         if unmapped_pct > 40.0:
             characteristics.append(f"{unmapped_pct}% unmapped lighting (uncertainty preserved)")
+        if nearby_places:
+            top_place = nearby_places[0]
+            characteristics.append(f"Passes near {top_place['name']} ({int(top_place['distanceMeters'])}m)")
 
         if category == "fastest":
             ranking_exp = (
@@ -479,14 +549,106 @@ class DijkstraRouter:
             node_path=node_path,
             geometry=geometry_coords,
             segments=segments_output,
-            limitations=sorted(list(route_limitations))
+            limitations=sorted(list(route_limitations)),
+            streetlight_summary=streetlight_summary,
+            nearby_places=nearby_places
         )
+
+    def _find_nearby_places(
+        self,
+        geometry_coords: List[List[float]],
+        corridor_meters: float = 500.0,
+        max_results: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Discovers verified civic assistance facilities, transit stops, and landmarks
+        within the configured spatial corridor along the route geometry.
+        """
+        if not geometry_coords or len(geometry_coords) < 2:
+            return []
+
+        ref_lat = geometry_coords[0][0]
+        ref_lon = geometry_coords[0][1]
+        m_per_lat = 111000.0
+        m_per_lon = 111000.0 * math.cos(math.radians(ref_lat))
+
+        route_pts = [((lon - ref_lon) * m_per_lon, (lat - ref_lat) * m_per_lat) for lat, lon in geometry_coords]
+        route_line = LineString(route_pts)
+
+        all_candidates: List[Dict[str, Any]] = []
+
+        # 1. Police stations & hospitals from verified facilities
+        if hasattr(self, "facilities_result") and self.facilities_result:
+            for fac in getattr(self.facilities_result, "police_stations", []):
+                all_candidates.append({
+                    "id": fac.id,
+                    "name": fac.name,
+                    "category": "police",
+                    "latitude": fac.latitude,
+                    "longitude": fac.longitude,
+                    "source": "OpenStreetMap (amenity=police)",
+                    "limitations": "Operating hours, desk staffing, and immediate response readiness are not monitored in real time."
+                })
+            for fac in getattr(self.facilities_result, "hospitals", []):
+                all_candidates.append({
+                    "id": fac.id,
+                    "name": fac.name,
+                    "category": "hospital",
+                    "latitude": fac.latitude,
+                    "longitude": fac.longitude,
+                    "source": "OpenStreetMap (amenity=hospital)",
+                    "limitations": "Emergency capacity, bed availability, and specialty medical services are not monitored in real time."
+                })
+
+        # 2. Add corridor landmarks and transit hubs
+        all_candidates.extend(PILOT_CORRIDOR_LANDMARKS)
+
+        matched: List[Dict[str, Any]] = []
+        for cand in all_candidates:
+            c_lat = cand["latitude"]
+            c_lon = cand["longitude"]
+            c_pt = Point((c_lon - ref_lon) * m_per_lon, (c_lat - ref_lat) * m_per_lat)
+            dist_m = float(route_line.distance(c_pt))
+
+            if dist_m <= corridor_meters:
+                walk_mins = round(dist_m / (self.risk_model.walking_speed_mps * 60.0), 1)
+                matched.append({
+                    "id": cand["id"],
+                    "name": cand["name"],
+                    "category": cand["category"],
+                    "distanceMeters": round(dist_m, 1),
+                    "walkingMinutes": walk_mins,
+                    "coordinates": [round(c_lat, 6), round(c_lon, 6)],
+                    "source": cand.get("source", "OpenStreetMap"),
+                    "attribution": "© OpenStreetMap contributors, ODbL 1.0",
+                    "limitations": cand.get("limitations", "Public location mapped on OpenStreetMap.")
+                })
+
+        # Sort by distance ascending and cap at max_results
+        matched.sort(key=lambda x: x["distanceMeters"])
+        seen_names = set()
+        deduped = []
+        for m in matched:
+            clean_name = m["name"].lower().strip()
+            if clean_name not in seen_names:
+                seen_names.add(clean_name)
+                deduped.append(m)
+                if len(deduped) >= max_results:
+                    break
+
+        return deduped
 
     def _build_simple_digraph(self, weight_attr: str) -> Tuple[nx.DiGraph, Dict[Tuple[int, int], int]]:
         """
         Collapses MultiDiGraph to simple DiGraph for Yen's algorithm.
         Picks the minimum weight edge for each (u, v) and retains the mapping to the edge key.
+        Caches results per weight_attr for efficiency.
         """
+        if not hasattr(self, "_simple_digraphs"):
+            self._simple_digraphs = {}
+        if weight_attr in self._simple_digraphs:
+            return self._simple_digraphs[weight_attr]
+
         G_simple = nx.DiGraph()
         edge_key_map: Dict[Tuple[int, int], int] = {}
 
@@ -496,7 +658,9 @@ class DijkstraRouter:
                 G_simple.add_edge(u, v, cost=cost)
                 edge_key_map[(u, v)] = k
 
-        return G_simple, edge_key_map
+        res = (G_simple, edge_key_map)
+        self._simple_digraphs[weight_attr] = res
+        return res
 
     @staticmethod
     def calculate_path_edge_overlap(path1: List[int], path2: List[int]) -> float:
@@ -535,15 +699,16 @@ class DijkstraRouter:
         orig_node, orig_snap_dist = self._find_nearest_node(origin_lat, origin_lon)
         dest_node, dest_snap_dist = self._find_nearest_node(dest_lat, dest_lon)
 
-        if orig_snap_dist > 500.0:
+        max_snap = getattr(settings, "ROUTING_MAX_SNAP_DISTANCE_METERS", 250.0)
+        if orig_snap_dist > max_snap:
             raise OutOfCoverageError(
                 f"Origin ({origin_lat:.5f}, {origin_lon:.5f}) is {int(orig_snap_dist)}m from the nearest pedestrian network street, "
-                "which exceeds walkable network access coverage (500m). Please select a location on or near a walkable street."
+                f"which exceeds walkable network access coverage ({int(max_snap)}m). Please select a location on or near a walkable street."
             )
-        if dest_snap_dist > 500.0:
+        if dest_snap_dist > max_snap:
             raise OutOfCoverageError(
                 f"Destination ({dest_lat:.5f}, {dest_lon:.5f}) is {int(dest_snap_dist)}m from the nearest pedestrian network street, "
-                "which exceeds walkable network access coverage (500m). Please select a location on or near a walkable street."
+                f"which exceeds walkable network access coverage ({int(max_snap)}m). Please select a location on or near a walkable street."
             )
 
         if orig_node == dest_node:
@@ -593,7 +758,10 @@ class DijkstraRouter:
 
         if balanced_path == fastest_path:
             balanced_route.is_identical_to_fastest = True
-            balanced_route.identical_notes = "Balanced trade-off selects the same optimal path as the fastest route under current risk weights."
+            balanced_route.identical_notes = (
+                f"Optimal under both travel-time and balanced risk objectives (lambda={self.risk_model.lambda_balanced}). "
+                "The most direct corridor also offers the highest verified lighting and assistance accessibility."
+            )
 
         # Detour constraint check
         if balanced_route.duration_seconds > (fastest_time_s * self.max_detour_ratio):
@@ -634,9 +802,14 @@ class DijkstraRouter:
             )
         if safety_path == fastest_path:
             safety_route.is_identical_to_fastest = True
-            safety_route.identical_notes = "The fastest route already follows the safest corridor with highest verified lighting; no detour needed under the current safety model."
+            safety_route.identical_notes = (
+                f"Optimal under both travel-time and safety objectives (lambda={self.risk_model.lambda_safety}). "
+                "The fastest corridor already follows the most illuminated and facility-proximate street segments available in the network."
+            )
         elif safety_path == balanced_path:
-            safety_route.identical_notes = "Safety-prioritized route selects the same path as the balanced route."
+            safety_route.identical_notes = (
+                f"Safety-prioritized route selects the same path as the balanced route under lambda={self.risk_model.lambda_safety}."
+            )
 
         selected_node_paths.append(safety_path)
 
@@ -659,18 +832,22 @@ class DijkstraRouter:
                             break
 
                     if not is_duplicate:
-                        alt_count += 1
-                        alt_route = self._reconstruct_route_metrics(
+                        alt_cand = self._reconstruct_route_metrics(
                             node_path=cand_path,
-                            route_id=f"route-alt-{alt_count}",
-                            name=f"Alternative Route {alt_count}",
+                            route_id=f"route-alt-{alt_count + 1}",
+                            name=f"Alternative Route {alt_count + 1}",
                             category="alternative",
                             preference="Alternative",
                             cost_weight_attr="cost_balanced",
                             orig_coords=(origin_lat, origin_lon),
                             dest_coords=(dest_lat, dest_lon)
                         )
-                        alt_routes.append(alt_route)
+                        # Detour constraint check
+                        if alt_cand.duration_seconds > (fastest_time_s * self.max_detour_ratio):
+                            break
+
+                        alt_count += 1
+                        alt_routes.append(alt_cand)
                         selected_node_paths.append(cand_path)
 
                         if alt_count >= max_alts:

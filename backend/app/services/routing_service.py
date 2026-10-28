@@ -1,106 +1,16 @@
-from datetime import datetime, timezone
-from typing import Dict, Any, List
-from app.schemas.route import RouteCompareResponse, RouteAlternative, EvidenceSummary
-
-# Demonstrative synthetic pilot corridor routes (Bengaluru: Jayanagar 4th Block -> Lalbagh)
-SYNTHETIC_ROUTES: Dict[str, Dict[str, Any]] = {
-    "route-evidence": {
-        "id": "route-evidence",
-        "name": "Evidence-led Route",
-        "category": "evidence_led",
-        "distanceMeters": 1850,
-        "durationSeconds": 1440,
-        "characteristics": [
-            "Primary commercial road",
-            "Continuous pedestrian footpaths",
-            "Municipal LED lighting records"
-        ],
-        "evidenceSummary": {
-            "coverage": "adequate",
-            "coveragePercentage": 78,
-            "freshestObservationDays": 8,
-            "freshnessState": "fresh",
-            "riskEstimate": "Moderate environmental context"
-        },
-        "explanation": "Prioritizes street segments with corroborated lighting observations and active commercial frontages. Geometry follows 10th Main Road and South End Road. Evidence availability is moderate to high, though gaps remain in alleyway connections.",
-        "tradeoffs": "Adds ~5 minutes (350 meters) compared to direct residential shortcut to keep to streets with documented lighting assets.",
-        "geometry": [
-            [12.9257, 77.5833],
-            [12.9290, 77.5831],
-            [12.9330, 77.5832],
-            [12.9370, 77.5835],
-            [12.9415, 77.5840],
-            [12.9460, 77.5844],
-            [12.9501, 77.5847]
-        ]
-    },
-    "route-balanced": {
-        "id": "route-balanced",
-        "name": "Balanced Sample Route",
-        "category": "balanced",
-        "distanceMeters": 1720,
-        "durationSeconds": 1320,
-        "characteristics": [
-            "Mixed commercial & residential",
-            "Secondary avenue",
-            "Partial lighting coverage"
-        ],
-        "evidenceSummary": {
-            "coverage": "limited",
-            "coveragePercentage": 62,
-            "freshestObservationDays": 22,
-            "freshnessState": "fresh",
-            "riskEstimate": "Mixed environmental context"
-        },
-        "explanation": "Follows 9th Main Road through mixed commercial-residential zoning. Moderate pedestrian traffic during evening hours. Streetlight verification records are ~22 days old.",
-        "tradeoffs": "Saves 2 minutes relative to evidence-led path, but enters secondary lanes with intermittent tree canopy shadow.",
-        "geometry": [
-            [12.9257, 77.5833],
-            [12.9300, 77.5850],
-            [12.9350, 77.5860],
-            [12.9400, 77.5855],
-            [12.9450, 77.5850],
-            [12.9501, 77.5847]
-        ]
-    },
-    "route-shortest": {
-        "id": "route-shortest",
-        "name": "Shortest Sample Route",
-        "category": "shortest",
-        "distanceMeters": 1510,
-        "durationSeconds": 1140,
-        "characteristics": [
-            "Direct residential cut-through",
-            "Narrow secondary lanes",
-            "Sparse public observations"
-        ],
-        "evidenceSummary": {
-            "coverage": "insufficient",
-            "coveragePercentage": 35,
-            "freshestObservationDays": 65,
-            "freshnessState": "stale",
-            "riskEstimate": "High informational uncertainty"
-        },
-        "explanation": "Direct path through residential interior cross-streets. 65% of segments have no recent municipal audit or verified lighting records. Missing data must never be interpreted as low risk.",
-        "tradeoffs": "Saves ~5 minutes, but traverses segments with blind curves and undocumented lighting status.",
-        "geometry": [
-            [12.9257, 77.5833],
-            [12.9310, 77.5840],
-            [12.9380, 77.5842],
-            [12.9440, 77.5845],
-            [12.9501, 77.5847]
-        ]
-    }
-}
-
-
 import re
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
-from app.schemas.route import RouteCompareResponse, RouteAlternative, EvidenceSummary
+from app.schemas.route import (
+    RouteCompareResponse,
+    RouteAlternative,
+    EvidenceSummary,
+    StreetlightEvidenceSummary,
+    NearbyPlace
+)
 from app.geospatial.study_area import StudyArea
 from app.geospatial.exceptions import (
     OutOfCoverageError,
@@ -108,6 +18,7 @@ from app.geospatial.exceptions import (
     DisconnectedNetworkError,
     LocationNotFoundError,
     GeocodingServiceUnavailableError,
+    NetworkRetrievalError,
 )
 from app.geospatial.network_adapter import OsmNetworkAdapter
 from app.geospatial.facilities_adapter import OsmFacilityAdapter
@@ -115,7 +26,6 @@ from app.geospatial.crime_adapter import CsvCrimeAdapter
 from app.geospatial.community_adapter import DatabaseCommunityAdapter
 from app.geospatial.segment_risk import SegmentRiskModel
 from app.geospatial.dijkstra_router import DijkstraRouter, ComputedRoute
-from app.geospatial.network_builder import build_bengaluru_pilot_network
 from app.services.geocoding_service import get_geocoding_service
 
 logger = logging.getLogger(__name__)
@@ -217,6 +127,10 @@ def _resolve_location_robust(
     )
 
 
+# Module-level router cache to achieve <80ms routing for custom locations
+_ROUTER_CACHE: Dict[Tuple, DijkstraRouter] = {}
+
+
 def compare_routes_service(
     origin: str,
     destination: str,
@@ -238,14 +152,17 @@ def compare_routes_service(
     study_area.validate_coordinate_pair(orig_coords[0], orig_coords[1], label=f"Origin '{origin}'")
     study_area.validate_coordinate_pair(dest_coords[0], dest_coords[1], label=f"Destination '{destination}'")
 
-    # 2. Load pedestrian network graph
+    # 2. Load genuine pedestrian network graph
     net_adapter = OsmNetworkAdapter()
     try:
         net_result = net_adapter.get_pedestrian_network(study_area)
         graph = net_result.graph
     except Exception as e:
-        logger.warning(f"Could not load pedestrian network via adapter ({e}); using pilot network generator.")
-        graph = build_bengaluru_pilot_network()
+        logger.error(f"Failed to load genuine pedestrian network via adapter: {e}")
+        raise NetworkRetrievalError(
+            f"Genuine OpenStreetMap pedestrian network for '{study_area.name}' could not be loaded: {str(e)}. "
+            "SafePath Finder does not use synthetic or approximated networks for production routing."
+        ) from e
 
     # 3. Load evidence sources
     fac_res = None
@@ -284,17 +201,38 @@ def compare_routes_service(
         min_coverage_threshold=prefs.get("minCoverageThreshold")
     )
 
-    # 5. Initialize Dijkstra & Yen Router
-    router = DijkstraRouter(
-        graph=graph,
-        risk_model=risk_model,
-        facilities_result=fac_res,
-        crime_dataset=crime_res,
-        community_reports=comm_reports,
-        max_detour_ratio=prefs.get("maxDetourRatio"),
-        overlap_threshold=prefs.get("overlapThreshold"),
-        max_alternatives=prefs.get("maxAlternatives")
+    # 5. Initialize Dijkstra & Yen Router with in-memory caching for sub-80ms custom routing
+    router_cache_key = (
+        study_area.slug,
+        id(graph),
+        risk_model.walking_speed_mps,
+        risk_model.lambda_balanced,
+        risk_model.lambda_safety,
+        risk_model.r_unknown_prior,
+        round(risk_model.w_crime, 4),
+        round(risk_model.w_lighting, 4),
+        round(risk_model.w_community, 4),
+        round(risk_model.w_assistance, 4),
+        prefs.get("maxDetourRatio"),
+        prefs.get("overlapThreshold"),
+        prefs.get("maxAlternatives"),
+        len(comm_reports)
     )
+
+    if router_cache_key in _ROUTER_CACHE:
+        router = _ROUTER_CACHE[router_cache_key]
+    else:
+        router = DijkstraRouter(
+            graph=graph,
+            risk_model=risk_model,
+            facilities_result=fac_res,
+            crime_dataset=crime_res,
+            community_reports=comm_reports,
+            max_detour_ratio=prefs.get("maxDetourRatio"),
+            overlap_threshold=prefs.get("overlapThreshold"),
+            max_alternatives=prefs.get("maxAlternatives")
+        )
+        _ROUTER_CACHE[router_cache_key] = router
 
     # 6. Determine ranking mode
     prefer_lighting = prefs.get("preferLighting", True)
@@ -337,6 +275,14 @@ def compare_routes_service(
             cov_label = "insufficient"
             fresh_label = "stale"
 
+        st_summary = None
+        if r.streetlight_summary:
+            st_summary = StreetlightEvidenceSummary(**r.streetlight_summary)
+
+        nearby_places = []
+        if r.nearby_places:
+            nearby_places = [NearbyPlace(**p) for p in r.nearby_places]
+
         routes_output.append(
             RouteAlternative(
                 id=r.id,
@@ -371,7 +317,9 @@ def compare_routes_service(
                 limitations=r.limitations,
                 sourceMetadata=r.source_metadata,
                 isIdenticalToFastest=r.is_identical_to_fastest,
-                identicalNotes=r.identical_notes
+                identicalNotes=r.identical_notes,
+                streetlightSummary=st_summary,
+                nearbyPlaces=nearby_places
             )
         )
 

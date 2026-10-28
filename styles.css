@@ -1129,8 +1129,146 @@ a:focus-visible {
   color: var(--text-muted);
   line-height: 1.45;
 }
-.decision-caveats .caveat-banner strong {
+/* Real Streetlight Evidence & Nearby Places Decision Sections */
+.decision-full-width-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.decision-full-width-section h4 {
+  font-size: 12.5px;
+  font-weight: 700;
   color: var(--text-main);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.streetlight-bar-container {
+  margin-top: 8px;
+  margin-bottom: 10px;
+}
+
+.streetlight-progress-bar {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: #e5e7eb;
+}
+
+.streetlight-seg {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.streetlight-seg.lit {
+  background: #10b981;
+}
+
+.streetlight-seg.unlit {
+  background: #f59e0b;
+}
+
+.streetlight-seg.conflicting {
+  background: #ef4444;
+}
+
+.streetlight-seg.unknown {
+  background: #9ca3af;
+}
+
+.streetlight-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.streetlight-stat-card {
+  background: #f9fafb;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 11px;
+}
+
+.streetlight-stat-card small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  margin-bottom: 2px;
+}
+
+.streetlight-stat-card strong {
+  font-size: 12.5px;
+  color: var(--text-main);
+}
+
+.streetlight-explanation-text {
+  font-size: 11.5px;
+  color: var(--text-body);
+  line-height: 1.5;
+  background: #f8fafc;
+  border-left: 3px solid #3b82f6;
+  padding: 8px 12px;
+  border-radius: 0 4px 4px 0;
+  margin-top: 8px;
+}
+
+.nearby-places-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.nearby-place-card {
+  background: #f9fafb;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.15s ease;
+}
+
+.nearby-place-card:hover {
+  border-color: var(--border-strong);
+}
+
+.nearby-place-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.nearby-place-name {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+.nearby-place-distance {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.nearby-place-distance strong {
+  color: var(--text-main);
+}
+
+.nearby-place-meta {
+  font-size: 10px;
+  color: #6b7280;
 }
 
 .route-card {

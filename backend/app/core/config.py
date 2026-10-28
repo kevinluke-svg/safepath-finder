@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     ROUTING_MIN_COVERAGE_THRESHOLD: float = 0.30  # Coverage Q below this flags route as insufficient evidence
     ROUTING_ALTERNATIVE_OVERLAP_THRESHOLD: float = 0.80  # Jaccard edge similarity threshold to filter near-duplicate paths
     ROUTING_MAX_ALTERNATIVES: int = 3  # Maximum distinct loopless alternatives via Yen's algorithm
+    ROUTING_MAX_SNAP_DISTANCE_METERS: float = 250.0  # Maximum distance to snap coordinate to pedestrian street network
+    ROUTING_NEARBY_CORRIDOR_METERS: float = 500.0  # Spatial proximity threshold (meters) for nearby facilities and landmarks
+    ROUTING_MAX_NEARBY_PLACES: int = 10  # Maximum nearby places to return per route
 
     # Geocoding & Location Search Configuration
     GEOCODING_PROVIDER: str = "nominatim"  # "nominatim" (default OpenStreetMap provider)

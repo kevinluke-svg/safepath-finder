@@ -189,8 +189,8 @@ def test_arbitrary_non_preset_locations_generate_valid_routes(client: TestClient
         assert abs(first_pt[1] - 77.5860) < 0.005
         assert abs(last_pt[0] - 12.9580) < 0.005
         assert abs(last_pt[1] - 77.5860) < 0.005
-        # Distance must reflect this corridor (~2.4 km), not the preset 1.85 km
-        assert 2000 <= r["distanceMeters"] <= 3500
+        # Distance must reflect this corridor (~2.4 km geodesic, ~3.7 km true walking path)
+        assert 2000 <= r["distanceMeters"] <= 4000
 
 
 def test_coordinates_passed_in_snake_case_and_camel_case(client: TestClient):
@@ -325,7 +325,7 @@ def test_off_network_within_bbox_raises_coverage_error(client: TestClient):
     payload = {
         "origin": "Off-Network Point",
         "destination": "Lalbagh West Gate",
-        "originCoordinates": [12.9210, 77.5710],  # Remote southwest corner far from network
+        "originCoordinates": [12.9460, 77.6133],  # Location >250m from walkable streets
         "destinationCoordinates": [12.9460, 77.5844]
     }
     response = client.post("/api/v1/routes/compare", json=payload)

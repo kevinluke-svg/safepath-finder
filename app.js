@@ -274,38 +274,84 @@
     }, 150);
   }
 
+  function areGeometriesIdentical(geom1, geom2) {
+    if (!geom1 || !geom2 || geom1.length !== geom2.length) return false;
+    for (let i = 0; i < geom1.length; i++) {
+      if (Math.abs(geom1[i][0] - geom2[i][0]) > 0.00001 || Math.abs(geom1[i][1] - geom2[i][1]) > 0.00001) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   function renderMapFeatures() {
     if (!state.map) return;
 
-    // 1. Observations layer
+    // 1. Observations layer (Community reports)
     state.layers.observations.clearLayers();
-    if (state.toggles.observations) {
-      MAP_PINS.filter(p => p.type !== 'blue').forEach(p => {
-        const icon = L.divIcon({
-          className: '',
-          html: `<div class="custom-map-pin ${p.type}" title="${escapeHtml(p.title)}">${p.code}</div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13]
-        });
-        L.marker(p.point, { icon })
-          .addTo(state.layers.observations)
-          .bindPopup(`<strong>${escapeHtml(p.title)}</strong><br><small style="color:#5e6f64;">${escapeHtml(p.detail)}</small>`);
+    if (state.toggles.observations && state.communityReports && state.communityReports.length) {
+      state.communityReports.forEach(rep => {
+        const lat = rep.latitude || (rep.coordinates && rep.coordinates[0]);
+        const lon = rep.longitude || (rep.coordinates && rep.coordinates[1]);
+        if (lat && lon) {
+          const icon = L.divIcon({
+            className: '',
+            html: `<div class="custom-map-pin amber" title="${escapeHtml(rep.category || 'Hazard')}">!</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          });
+          L.marker([lat, lon], { icon })
+            .addTo(state.layers.observations)
+            .bindPopup(`
+              <strong>${escapeHtml(rep.category || 'Community Hazard')}</strong><br>
+              <small style="color:#5e6f64;">${escapeHtml(rep.description || rep.plainExplanation || 'Verified community observation')}</small>
+            `);
+        }
       });
     }
 
-    // 2. Safe Havens / Transit layer
+    // 2. Verified Civic Assistance Facilities & Landmarks layer (Priority 5)
     state.layers.places.clearLayers();
     if (state.toggles.places) {
-      MAP_PINS.filter(p => p.type === 'blue').forEach(p => {
-        const icon = L.divIcon({
-          className: '',
-          html: `<div class="custom-map-pin blue" title="${escapeHtml(p.title)}">P</div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13]
-        });
-        L.marker(p.point, { icon })
-          .addTo(state.layers.places)
-          .bindPopup(`<strong>${escapeHtml(p.title)}</strong><br><small style="color:#5e6f64;">${escapeHtml(p.detail)}</small>`);
+      const activeRoute = (state.currentRoutes && state.currentRoutes.find(r => r.id === state.selectedRouteId)) || (state.currentRoutes && state.currentRoutes[0]);
+      const placesToRender = (activeRoute && activeRoute.nearbyPlaces && activeRoute.nearbyPlaces.length > 0)
+        ? activeRoute.nearbyPlaces
+        : [];
+
+      placesToRender.forEach(p => {
+        if (p.coordinates && p.coordinates.length === 2) {
+          let pinClass = 'blue';
+          let pinCode = 'P';
+          if (p.category === 'hospital') {
+            pinClass = 'red';
+            pinCode = 'H';
+          } else if (p.category === 'transit') {
+            pinClass = 'blue';
+            pinCode = 'T';
+          } else if (p.category === 'park') {
+            pinClass = 'green';
+            pinCode = 'Park';
+          } else if (p.category === 'landmark') {
+            pinClass = 'amber';
+            pinCode = '★';
+          }
+
+          const icon = L.divIcon({
+            className: '',
+            html: `<div class="custom-map-pin ${pinClass}" title="${escapeHtml(p.name)}">${pinCode}</div>`,
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+          });
+          L.marker(p.coordinates, { icon })
+            .addTo(state.layers.places)
+            .bindPopup(`
+              <strong>${escapeHtml(p.name)}</strong><br>
+              <span style="font-size:11px;">Category: <strong>${p.category.toUpperCase()}</strong></span><br>
+              <span style="font-size:11px;">Distance from route: <strong>${Math.round(p.distanceMeters)}m</strong> (~${p.walkingMinutes} min walk)</span><br>
+              <small style="color:#5e6f64;">Source: ${escapeHtml(p.source || 'OpenStreetMap')} (${escapeHtml(p.attribution || 'ODbL 1.0')})</small><br>
+              <small style="color:#854d0e; font-size:10.5px; display:block; margin-top:3px;">${escapeHtml(p.limitations || 'Public facility verified on OpenStreetMap.')}</small>
+            `);
+        }
       });
     }
 
@@ -371,8 +417,24 @@
 
     if (!state.currentRoutes || !state.currentRoutes.length) return;
 
+    const selectedRoute = state.currentRoutes.find(r => r.id === state.selectedRouteId) || state.currentRoutes[0];
+
+    // Identify routes that share identical geometry with the selected route
+    const identicalToSelected = state.currentRoutes.filter(
+      r => r.id !== selectedRoute.id && areGeometriesIdentical(r.geometry, selectedRoute.geometry)
+    );
+
     state.currentRoutes.forEach(route => {
       const isSelected = route.id === state.selectedRouteId;
+      const sharesGeometryWithSelected = !isSelected && areGeometriesIdentical(route.geometry, selectedRoute.geometry);
+
+      // Priority 8: When multiple routes genuinely share the identical street geometry,
+      // do NOT render conflicting multi-colored layered polylines on top of each other.
+      // Only render the selected route prominently, and clearly note the shared path in the tooltip.
+      if (sharesGeometryWithSelected) {
+        return;
+      }
+
       let color = '#0f766e'; // Default teal
       let dashArray = null;
 
@@ -382,13 +444,12 @@
         color = '#d97706'; // Balanced (amber)
       } else if (route.category === 'fastest' || route.category === 'shortest') {
         color = '#2563eb'; // Fastest (blue)
-        dashArray = '6, 6';
+        dashArray = isSelected ? null : '6, 6';
       } else if (route.category === 'alternative') {
         color = '#7c3aed'; // Alternative (purple)
-        dashArray = '4, 4';
+        dashArray = isSelected ? null : '4, 4';
       }
 
-      // Filter valid points [lat, lon]
       const validPoints = (route.geometry || []).filter(
         pt => Array.isArray(pt) && pt.length >= 2 && !isNaN(pt[0]) && !isNaN(pt[1])
       );
@@ -403,9 +464,13 @@
         lineJoin: 'round'
       }).addTo(state.map);
 
-      polyline.bindTooltip(`<strong>${escapeHtml(route.name)}</strong> · ${Math.round(route.durationSeconds / 60)} min walk`, {
-        sticky: true
-      });
+      let tooltipText = `<strong>${escapeHtml(route.name)}</strong> · ${Math.round(route.durationSeconds / 60)} min walk`;
+      if (isSelected && identicalToSelected.length > 0) {
+        const otherNames = identicalToSelected.map(r => r.name).join(', ');
+        tooltipText += `<br><span style="color:#d97706;">ⓘ Shared optimal path with ${escapeHtml(otherNames)}</span>`;
+      }
+
+      polyline.bindTooltip(tooltipText, { sticky: true });
 
       polyline.on('click', () => {
         selectRoute(route.id);
@@ -419,24 +484,23 @@
       state.layers.routes[state.selectedRouteId].bringToFront();
     }
 
-    // Start and End Markers
-    const primaryRoute = state.currentRoutes.find(r => r.id === state.selectedRouteId) || state.currentRoutes[0];
-    if (primaryRoute && primaryRoute.geometry && primaryRoute.geometry.length >= 2) {
-      const geom = primaryRoute.geometry;
+    // Start (A) and End (B) Markers placed strictly at traversed route endpoints
+    if (selectedRoute && selectedRoute.geometry && selectedRoute.geometry.length >= 2) {
+      const geom = selectedRoute.geometry;
       const startPt = geom[0];
       const endPt = geom[geom.length - 1];
 
       const startIcon = L.divIcon({
         className: '',
-        html: '<div style="height:18px;width:18px;border-radius:50%;background:#0f766e;border:3px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;">A</div>',
-        iconSize: [18, 18],
-        iconAnchor: [9, 9]
+        html: '<div style="height:20px;width:20px;border-radius:50%;background:#0f766e;border:3px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:bold;">A</div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
       });
       const endIcon = L.divIcon({
         className: '',
-        html: '<div style="height:18px;width:18px;border-radius:4px;background:#b91c1c;border:3px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;">B</div>',
-        iconSize: [18, 18],
-        iconAnchor: [9, 9]
+        html: '<div style="height:20px;width:20px;border-radius:4px;background:#b91c1c;border:3px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:bold;">B</div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
       });
 
       const originName = $('#originInput')?.value.trim() || 'Origin';
@@ -444,12 +508,15 @@
 
       L.marker(startPt, { icon: startIcon })
         .addTo(state.layers.markers)
-        .bindPopup(`<strong>Origin (A)</strong><br>${escapeHtml(originName)}<br><small style="color:#5e6f64;">${startPt[0].toFixed(5)}, ${startPt[1].toFixed(5)}</small>`);
+        .bindPopup(`<strong>Origin (A)</strong><br>${escapeHtml(originName)}<br><small style="color:#5e6f64;">Snapped node: ${startPt[0].toFixed(5)}, ${startPt[1].toFixed(5)}</small>`);
 
       L.marker(endPt, { icon: endIcon })
         .addTo(state.layers.markers)
-        .bindPopup(`<strong>Destination (B)</strong><br>${escapeHtml(destName)}<br><small style="color:#5e6f64;">${endPt[0].toFixed(5)}, ${endPt[1].toFixed(5)}</small>`);
+        .bindPopup(`<strong>Destination (B)</strong><br>${escapeHtml(destName)}<br><small style="color:#5e6f64;">Snapped node: ${endPt[0].toFixed(5)}, ${endPt[1].toFixed(5)}</small>`);
     }
+
+    // Refresh dynamic nearby facilities layer
+    renderMapFeatures();
   }
 
   function fitMapBounds() {
@@ -726,13 +793,31 @@
         `;
       }
 
-      // Environmental metrics summary
-      const litPercentage = route.evidenceSummary?.lightingCoveragePercentage !== null && route.evidenceSummary?.lightingCoveragePercentage !== undefined
-        ? `${Number(route.evidenceSummary.lightingCoveragePercentage).toFixed(0)}% verified lit`
-        : 'Documented lighting';
+      // Real Streetlight Summary
+      let litPercentage = 'Documented lighting';
+      if (route.streetlightSummary) {
+        const sl = route.streetlightSummary;
+        litPercentage = `${sl.litPercentage.toFixed(0)}% lit (${Math.round(sl.knownLitDistanceMeters)}m)`;
+      } else if (route.evidenceSummary?.lightingCoveragePercentage !== null && route.evidenceSummary?.lightingCoveragePercentage !== undefined) {
+        litPercentage = `${Number(route.evidenceSummary.lightingCoveragePercentage).toFixed(0)}% verified lit`;
+      }
+
       const riskVal = route.routeRisk !== null && route.routeRisk !== undefined
         ? route.routeRisk.toFixed(2)
         : (route.evidenceSummary?.riskEstimate || '0.38');
+
+      // Nearby landmark snippet
+      let nearbySnippetHtml = '';
+      if (route.nearbyPlaces && route.nearbyPlaces.length > 0) {
+        const topPlace = route.nearbyPlaces[0];
+        const distM = Math.round(topPlace.distanceMeters);
+        const catEmoji = topPlace.category === 'police' ? '👮' : (topPlace.category === 'hospital' ? '🏥' : (topPlace.category === 'transit' ? '🚆' : (topPlace.category === 'park' ? '🌳' : '📍')));
+        nearbySnippetHtml = `
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+            <span>${catEmoji}</span> <span>Near <strong>${escapeHtml(topPlace.name)}</strong> (${distM}m)</span>
+          </div>
+        `;
+      }
 
       return `
         <article class="route-card ${isSelected ? 'selected' : ''}" data-route-id="${route.id}" role="button" tabindex="0" aria-pressed="${isSelected}">
@@ -766,6 +851,7 @@
               <strong>${riskVal} / 1.00</strong>
             </div>
           </div>
+          ${nearbySnippetHtml}
 
           ${identicalNoticeHtml}
           ${uncertaintyAlertHtml}
@@ -845,6 +931,129 @@
       `;
     }
 
+    // Streetlight Evidence Summary (Priority 4)
+    let streetlightHtml = '';
+    if (route.streetlightSummary) {
+      const sl = route.streetlightSummary;
+      const litPct = sl.litPercentage;
+      const unlitPct = sl.unlitPercentage;
+      const confPct = sl.conflictingPercentage;
+      const unkPct = sl.unknownPercentage;
+      
+      streetlightHtml = `
+        <div class="decision-full-width-section">
+          <h4>
+            <span>Streetlight & Lighting Evidence Audit</span>
+            <span style="font-size: 11px; font-weight: 500; text-transform: none; color: var(--text-muted);">
+              ${sl.mappedStreetlampsCount} mapped lamp posts along corridor
+            </span>
+          </h4>
+          
+          <div class="streetlight-bar-container">
+            <div class="streetlight-progress-bar" title="Lit: ${litPct.toFixed(1)}%, Unlit: ${unlitPct.toFixed(1)}%, Conflicting: ${confPct.toFixed(1)}%, Unknown: ${unkPct.toFixed(1)}%">
+              ${litPct > 0 ? `<div class="streetlight-seg lit" style="width: ${litPct}%"></div>` : ''}
+              ${unlitPct > 0 ? `<div class="streetlight-seg unlit" style="width: ${unlitPct}%"></div>` : ''}
+              ${confPct > 0 ? `<div class="streetlight-seg conflicting" style="width: ${confPct}%"></div>` : ''}
+              ${unkPct > 0 ? `<div class="streetlight-seg unknown" style="width: ${unkPct}%"></div>` : ''}
+            </div>
+          </div>
+
+          <div class="streetlight-stat-grid">
+            <div class="streetlight-stat-card">
+              <small style="color: #059669;">● Verified Lit</small>
+              <strong>${litPct.toFixed(1)}%</strong>
+              <div style="font-size: 10px; color: var(--text-muted);">${Math.round(sl.knownLitDistanceMeters)}m of route</div>
+            </div>
+            <div class="streetlight-stat-card">
+              <small style="color: #d97706;">● Verified Unlit</small>
+              <strong>${unlitPct.toFixed(1)}%</strong>
+              <div style="font-size: 10px; color: var(--text-muted);">${Math.round(sl.knownUnlitDistanceMeters)}m of route</div>
+            </div>
+            <div class="streetlight-stat-card">
+              <small style="color: #dc2626;">● Conflicting</small>
+              <strong>${confPct.toFixed(1)}%</strong>
+              <div style="font-size: 10px; color: var(--text-muted);">${Math.round(sl.conflictingDistanceMeters)}m of route</div>
+            </div>
+            <div class="streetlight-stat-card">
+              <small style="color: #6b7280;">● Unknown / Unmapped</small>
+              <strong>${unkPct.toFixed(1)}%</strong>
+              <div style="font-size: 10px; color: var(--text-muted);">${Math.round(sl.unknownDistanceMeters)}m of route</div>
+            </div>
+            <div class="streetlight-stat-card">
+              <small style="color: var(--primary);">💡 Mapped Lamps</small>
+              <strong>${sl.mappedStreetlampsCount} posts</strong>
+              <div style="font-size: 10px; color: var(--text-muted);">OSM node points</div>
+            </div>
+          </div>
+
+          <div class="streetlight-explanation-text">
+            <strong>Methodology & Epistemological Standard:</strong> Coverage is computed strictly from traversed pedestrian edge lengths in meters (${Math.round(sl.totalDistanceMeters)}m total). OpenStreetMap tags such as <code>lit=yes</code>, <code>lit=no</code>, and node <code>highway=street_lamp</code> represent distinct empirical observations. A mapped lamp post does not guarantee an illuminated street or functioning fixture. Crucially, <em>unknown status is never treated as unlit</em>, and <em>absence of mapped lighting is never treated as proof of safety</em>.
+          </div>
+        </div>
+      `;
+    }
+
+    // Nearby Places & Major Landmarks (Priority 5)
+    let nearbyPlacesHtml = '';
+    const places = route.nearbyPlaces || [];
+    if (places.length > 0) {
+      const placesCards = places.map(p => {
+        let catBadge = 'badge-blue';
+        let catIcon = '📍 Landmark';
+        if (p.category === 'police') { catBadge = 'badge-teal'; catIcon = '👮 Police'; }
+        else if (p.category === 'hospital') { catBadge = 'badge-amber'; catIcon = '🏥 Hospital'; }
+        else if (p.category === 'transit') { catBadge = 'badge-purple'; catIcon = '🚆 Public Transit'; }
+        else if (p.category === 'park') { catBadge = 'badge-teal'; catIcon = '🌳 Public Park'; }
+        else if (p.category === 'pharmacy') { catBadge = 'badge-amber'; catIcon = '💊 Pharmacy'; }
+
+        const walkTime = p.walkingMinutes !== null && p.walkingMinutes !== undefined
+          ? `~${Math.round(p.walkingMinutes)} min walk`
+          : `~${Math.round(p.distanceMeters / 76.6)} min walk`;
+
+        return `
+          <div class="nearby-place-card">
+            <div class="nearby-place-header">
+              <span class="nearby-place-name">${escapeHtml(p.name)}</span>
+              <span class="badge ${catBadge}" style="font-size: 10px; padding: 1px 6px;">${catIcon}</span>
+            </div>
+            <div class="nearby-place-distance">
+              <strong>${Math.round(p.distanceMeters)}m</strong> from route · <span>${walkTime}</span>
+            </div>
+            <div class="nearby-place-meta" style="font-size: 10px; color: var(--text-muted); line-height: 1.3;">
+              ${escapeHtml(p.attribution || 'OpenStreetMap contributors')}
+              <br><span style="color: var(--warning-text);">${escapeHtml(p.limitations || 'Status unverified; do not assume active staffing or response.')}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      nearbyPlacesHtml = `
+        <div class="decision-full-width-section">
+          <h4>
+            <span>Nearby Major Landmarks & Useful Facilities (500m Corridor)</span>
+            <span style="font-size: 11px; font-weight: 500; text-transform: none; color: var(--text-muted);">
+              ${places.length} verified places mapped
+            </span>
+          </h4>
+          <div class="nearby-places-grid">
+            ${placesCards}
+          </div>
+          <p style="font-size: 10.5px; color: var(--text-muted); margin-top: 8px; margin-bottom: 0;">
+            ⓘ <strong>Safety & Operational Disclaimer:</strong> Facility proximities are calculated as perpendicular access distances from the selected route corridor. A nearby police station or hospital does not imply that it is currently open, staffed, or capable of immediate emergency response.
+          </p>
+        </div>
+      `;
+    } else {
+      nearbyPlacesHtml = `
+        <div class="decision-full-width-section">
+          <h4><span>Nearby Major Landmarks & Useful Facilities (500m Corridor)</span></h4>
+          <div style="font-size: 11.5px; color: var(--text-muted); padding: 8px 12px; background: #f9fafb; border-radius: 4px; border: 1px solid var(--border);">
+            No verified police stations, hospitals, public transit stops, or major public landmarks are mapped within the 500m corridor of this specific route.
+          </div>
+        </div>
+      `;
+    }
+
     container.innerHTML = `
       <div class="decision-card-header">
         <div class="decision-title-group">
@@ -879,6 +1088,9 @@
           </div>
         </div>
       </div>
+
+      ${streetlightHtml}
+      ${nearbyPlacesHtml}
 
       <div class="decision-caveats">
         <div class="caveat-banner">
@@ -942,17 +1154,8 @@
       c.setAttribute('aria-pressed', String(isSelected));
     });
 
-    // Update map layer styling
-    if (state.map && state.layers.routes) {
-      Object.entries(state.layers.routes).forEach(([id, layer]) => {
-        const isSelected = id === routeId;
-        layer.setStyle({
-          weight: isSelected ? 6 : 3.5,
-          opacity: isSelected ? 0.95 : 0.45
-        });
-        if (isSelected) layer.bringToFront();
-      });
-    }
+    // Update map layer styling and nearby facilities
+    renderRoutePolylines();
 
     // Render explainable route decision summary
     renderRouteDecisionSummary(route);
