@@ -1,78 +1,85 @@
 /* ==========================================================================
    SafePath Finder - Core Design System & Responsive Styles
-   A restrained, accessible, human-centred design system for women's walking safety.
+   A restrained, research-grade design system for pedestrian walking context.
+   Deep Navy, Muted Teal, Slate, Neutral Grey, Crisp White.
    ========================================================================== */
 
 :root {
-  /* Restrained Forest Green Palette */
-  --primary: #1e533c;
-  --primary-hover: #153e2c;
-  --primary-active: #0e2d20;
-  --primary-subtle: #eaf3ee;
-  --primary-light: #d8eadf;
-  --primary-border: #9fc5b0;
+  /* Restrained Professional Palette: Deep Navy & Muted Teal */
+  --primary: #0f766e;
+  --primary-hover: #0d5f58;
+  --primary-active: #0a4742;
+  --primary-subtle: #f0fdfa;
+  --primary-light: #ccfbf1;
+  --primary-border: #99f6e4;
 
-  /* Warm Neutral & Surface Palette */
-  --bg-page: #f7f8f5;
+  /* Deep Navy */
+  --navy: #0f1f33;
+  --navy-dark: #09131f;
+  --navy-surface: #152943;
+  --navy-border: #1e3a5f;
+
+  /* Slate & Neutral Grey Surfaces */
+  --bg-page: #f8fafc;
   --surface: #ffffff;
-  --surface-alt: #f1f3ee;
+  --surface-alt: #f1f5f9;
   --surface-raised: #ffffff;
-  --surface-sunken: #edf0eb;
+  --surface-sunken: #e2e8f0;
 
   /* Dark, High-Contrast Text */
-  --text-main: #13221b;
-  --text-body: #324339;
-  --text-muted: #5e6f64;
-  --text-subtle: #829288;
+  --text-main: #0f172a;
+  --text-body: #334155;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
   --text-inverse: #ffffff;
 
   /* Borders & Dividers */
-  --border: #dfe5de;
-  --border-strong: #cbd5cb;
-  --border-focus: #1e533c;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --border-focus: #0f766e;
 
-  /* Semantic State Colors */
-  --warning: #945f14;
-  --warning-bg: #fdf6ec;
-  --warning-border: #edd9bd;
-  --warning-text: #73480a;
+  /* Restrained Semantic State Colors */
+  --warning: #b45309;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-text: #92400e;
 
-  --error: #a83d31;
-  --error-bg: #faebe9;
-  --error-border: #f0c9c4;
-  --error-text: #822920;
+  --error: #b91c1c;
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+  --error-text: #991b1b;
 
-  --info: #28597a;
-  --info-bg: #ebf3f8;
-  --info-border: #c8dfef;
-  --info-text: #1d435d;
+  --info: #0369a1;
+  --info-bg: #f0f9ff;
+  --info-border: #bae6fd;
+  --info-text: #075985;
 
-  --success: #1c7349;
-  --success-bg: #e9f5ee;
-  --success-border: #bce4cd;
-  --success-text: #135535;
+  --success: #0f766e;
+  --success-bg: #f0fdfa;
+  --success-border: #99f6e4;
+  --success-text: #115e59;
 
-  --flagged: #6e3fa8;
-  --flagged-bg: #f4eefa;
-  --flagged-border: #dbc4f4;
-  --flagged-text: #532d84;
+  --flagged: #6d28d9;
+  --flagged-bg: #f5f3ff;
+  --flagged-border: #ddd6fe;
+  --flagged-text: #5b21b6;
 
   /* Typography */
-  --font-main: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-display: 'Manrope', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-main: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Manrope", "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* Elevation & Radii */
-  --radius-xs: 5px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  /* Elevation & Radii — Restrained, no excessive rounding */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 3px rgba(18, 34, 25, 0.05);
-  --shadow-md: 0 4px 12px rgba(18, 34, 25, 0.06);
-  --shadow-lg: 0 12px 32px rgba(18, 34, 25, 0.08);
-  --shadow-focus: 0 0 0 3px rgba(30, 83, 60, 0.22);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 2px 4px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(15, 118, 110, 0.25);
 
   /* Spacing */
   --shell-max: 1440px;
@@ -86,6 +93,8 @@
 html {
   scroll-behavior: smooth;
   font-size: 14px;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* Ensure sticky topbar does not occlude in-page navigation anchors */
@@ -102,6 +111,8 @@ div[id] {
 body {
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
+  max-width: 100%;
   background-color: var(--bg-page);
   color: var(--text-body);
   font-family: var(--font-main);
@@ -703,6 +714,46 @@ a:focus-visible {
   margin-bottom: 10px;
 }
 
+.departure-period-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.departure-period-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.departure-period-chip:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-subtle);
+}
+
+.departure-period-chip input[type="radio"] {
+  accent-color: var(--primary);
+  margin: 0;
+  cursor: pointer;
+}
+
+.departure-period-chip:has(input:checked) {
+  background: var(--primary-subtle);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+
 .checkbox-row {
   display: flex;
   align-items: flex-start;
@@ -877,6 +928,208 @@ a:focus-visible {
 .custom-map-pin.amber { background: #fdf6ec; color: #945f14; border-color: #945f14; }
 .custom-map-pin.blue { background: #ebf3f8; color: #28597a; border-color: #28597a; }
 .custom-map-pin.red { background: #faebe9; color: #a83d31; border-color: #a83d31; }
+.custom-map-pin.dog-sighting { background: #eff6ff; color: #1d4ed8; border-color: #3b82f6; font-size: 13px; }
+.custom-map-pin.dog-group { background: #f5f3ff; color: #6d28d9; border-color: #8b5cf6; font-size: 13px; }
+.custom-map-pin.dog-aggressive { background: #fffbeb; color: #b45309; border-color: #f59e0b; font-size: 13px; }
+.custom-map-pin.dog-bite { background: #fef2f2; color: #b91c1c; border-color: #ef4444; font-size: 13px; }
+
+
+/* ==========================================================================
+   Professional SVG Map Marker System
+   Distinguishable by BOTH shape and outline icon (Not by color alone)
+   ========================================================================== */
+.sp-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.35);
+  border: 2px solid #ffffff;
+  transition: transform 0.12s ease;
+  user-select: none;
+}
+.sp-marker:hover {
+  transform: scale(1.1);
+  z-index: 1000 !important;
+}
+
+/* Distinct Marker Silhouettes */
+.sp-shape-circle {
+  border-radius: 50%;
+}
+.sp-shape-square {
+  border-radius: 4px;
+}
+.sp-shape-squircle {
+  border-radius: 7px;
+}
+.sp-shape-shield {
+  border-radius: 4px 4px 12px 12px;
+}
+.sp-shape-capsule {
+  border-radius: 12px;
+}
+.sp-shape-hexagon {
+  border-radius: 4px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+.sp-shape-diamond {
+  border-radius: 3px;
+  transform: rotate(45deg);
+}
+.sp-shape-diamond:hover {
+  transform: rotate(45deg) scale(1.1);
+}
+.sp-shape-diamond > svg,
+.sp-shape-diamond > span {
+  transform: rotate(-45deg);
+}
+.sp-shape-octagon {
+  border-radius: 3px;
+  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+}
+.sp-shape-triangle {
+  border-radius: 3px;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+/* Distinct Marker Palette */
+.sp-bg-navy { background: #0f1f33; color: #ffffff; border-color: #ffffff; }
+.sp-bg-crimson { background: #991b1b; color: #ffffff; border-color: #ffffff; }
+.sp-bg-dark-crimson { background: #7f1d1d; color: #ffffff; border-color: #ffffff; }
+.sp-bg-teal { background: #0f766e; color: #ffffff; border-color: #ffffff; }
+.sp-bg-sky { background: #0284c7; color: #ffffff; border-color: #ffffff; }
+.sp-bg-emerald { background: #047857; color: #ffffff; border-color: #ffffff; }
+.sp-bg-amber { background: #b45309; color: #ffffff; border-color: #ffffff; }
+.sp-bg-amber-dark { background: #92400e; color: #ffffff; border-color: #ffffff; }
+.sp-bg-slate { background: #334155; color: #ffffff; border-color: #ffffff; }
+.sp-bg-indigo { background: #4338ca; color: #ffffff; border-color: #ffffff; }
+.sp-bg-violet { background: #6d28d9; color: #ffffff; border-color: #ffffff; }
+.sp-bg-neutral { background: #475569; color: #ffffff; border-color: #ffffff; }
+
+/* Pack indicator badge */
+.sp-inner-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.sp-pack-tag {
+  position: absolute;
+  bottom: -4px;
+  right: -5px;
+  font-size: 8.5px;
+  font-weight: 800;
+  background: #1e1b4b;
+  color: #ffffff;
+  border-radius: 3px;
+  padding: 0 2px;
+  line-height: 1.1;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Route Endpoints A & B */
+.sp-marker-endpoint {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 11.5px;
+  letter-spacing: -0.02em;
+}
+.sp-marker-origin {
+  background: #0f766e;
+  border: 2.5px solid #ffffff;
+}
+.sp-marker-dest {
+  background: #991b1b;
+  border: 2.5px solid #ffffff;
+}
+.sp-marker-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #ffffff;
+}
+
+/* Spinner Keyframes & SVG utilities */
+@keyframes sp-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.sp-spin {
+  animation: sp-spin 0.9s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+.sp-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.sp-icon-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+.sp-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+/* Distinct Route Polylines in Map Legend */
+.legend-line-sample {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.legend-line-sample.route-solid {
+  border-top: 3.5px solid #0f766e;
+}
+.legend-line-sample.route-dashed {
+  border-top: 3.5px dashed #d97706;
+}
+.legend-line-sample.route-dotted {
+  border-top: 3.5px dotted #2563eb;
+}
+.legend-line-sample.route-dashdot {
+  border-top: 3.5px dashed #7c3aed;
+}
+
+/* Legend Marker Glyph Box */
+.legend-marker-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+  border: 1.5px solid #ffffff;
+}
+
+.rating-score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 11.5px;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 2px 7px;
+}
 
 /* ==========================================================================
    Route Comparison Cards
@@ -2638,4 +2891,416 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 .autocomplete-footer a {
   color: var(--text-muted, #5e6f64);
   text-decoration: underline;
+}
+
+/* ==========================================================================
+   Dog Encounter Audit & Guidance Styles
+   ========================================================================== */
+.dog-encounter-section {
+  margin-top: 16px;
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 16px;
+}
+.dog-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.dog-stat-card {
+  background: var(--bg-subtle, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.dog-stat-card small {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.dog-stat-card strong {
+  display: block;
+  font-size: 15px;
+  color: var(--text-heading, #0f172a);
+}
+.dog-explanation-box {
+  background: var(--bg-subtle, #f8fafc);
+  border-left: 3px solid #3b82f6;
+  padding: 8px 12px;
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 8px;
+}
+
+/* ==========================================================================
+   Phase 3: Explainable Map Experience & Layer Controls
+   ========================================================================== */
+.map-actions-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-layer-controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--surface-alt, #f8fafc);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.layer-control-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 2px;
+}
+
+.map-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-body, #334155);
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.map-toggle-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.map-toggle-btn.active {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #14532d;
+}
+
+.map-toggle-btn:not(.active) {
+  opacity: 0.55;
+  background: #f8fafc;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.map-toggle-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Multi-Section Legend Styles */
+.legend-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.legend-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legend-header {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.legend-pin-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 9.5px;
+  font-weight: bold;
+}
+
+.legend-line-sample {
+  display: inline-block;
+  width: 18px;
+  vertical-align: middle;
+}
+
+.legend-disclaimer-note {
+  font-size: 10.5px;
+  color: var(--warning-text, #92400e);
+  line-height: 1.45;
+  padding: 6px 8px;
+  background: #fffbeb;
+  border-radius: 4px;
+  border: 1px solid #fef3c7;
+}
+
+/* Time of Day Evidence Note */
+.departure-evidence-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  color: #166534;
+  margin-top: 8px;
+}
+
+.departure-evidence-note .note-icon {
+  font-weight: bold;
+  color: #15803d;
+}
+
+/* Active Journey Sticky Banner */
+.active-journey-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1050;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 10px 18px;
+  border-bottom: 2px solid #22c55e;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+.active-journey-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.active-journey-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #86efac;
+}
+
+.pulsing-green-dot {
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  animation: pulseGreen 1.8s infinite;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.active-journey-details {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.countdown-badge {
+  display: inline-block;
+  background: #1e293b;
+  border: 1px solid #475569;
+  color: #38bdf8;
+  font-family: monospace;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.active-journey-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Journey Sharing Modal & Consent */
+.journey-summary-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.journey-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+  color: #334155;
+}
+
+.journey-summary-row strong {
+  color: #0f172a;
+}
+
+.consent-box {
+  background: #fefce8;
+  border: 1px solid #fde047;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: #713f12;
+  cursor: pointer;
+  line-height: 1.45;
+}
+
+.consent-label input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: #ca8a04;
+}
+
+.contacts-checklist-box {
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: #fff;
+}
+
+/* Interactive Map Segment Selection Highlight */
+.segment-inspect-highlight {
+  stroke: #f59e0b !important;
+  stroke-width: 10px !important;
+  stroke-opacity: 0.9 !important;
+  filter: drop-shadow(0 0 6px #f59e0b);
+}
+
+/* Route Comparison Card - Active on Map visual differentiation */
+.route-card.selected-active {
+  border: 2px solid var(--primary, #059669) !important;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  position: relative;
+}
+
+.route-card-active-badge {
+  position: absolute;
+  top: -10px;
+  right: 14px;
+  background: var(--primary, #059669);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+/* Independent report corroboration & confirmation buttons */
+.report-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-report-feedback {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-report-feedback:hover {
+  background: #e2e8f0;
+}
+
+.btn-report-feedback.confirmed {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.btn-report-feedback.outdated {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #9f1239;
+}
+
+/* Responsive adjustments down to 320px */
+@media (max-width: 768px) {
+  .legend-sections-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .active-journey-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .active-journey-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .legend-sections-grid {
+    grid-template-columns: 1fr;
+  }
+  .map-layer-controls-bar {
+    gap: 4px;
+    padding: 6px 8px;
+  }
+  .map-toggle-btn {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
 }

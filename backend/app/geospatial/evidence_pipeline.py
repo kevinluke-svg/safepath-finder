@@ -23,6 +23,7 @@ from app.geospatial.facilities_adapter import OsmFacilityAdapter, FacilityPoint
 from app.geospatial.facility_router import FacilityRouter
 from app.geospatial.crime_processor import CrimeProcessor, ValidatedCrimeRecord
 from app.geospatial.community_processor import CommunityProcessor, ProcessedCommunityObservation
+from app.geospatial.pedestrian_infrastructure import PedestrianInfrastructureProcessor, EdgeInfrastructureClassification
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ class EvidencePipeline:
         self.net_adapter = OsmNetworkAdapter()
         self.facility_adapter = OsmFacilityAdapter()
         self.lighting_processor = LightingProcessor()
+        self.infra_processor = PedestrianInfrastructureProcessor()
         self.crime_processor = CrimeProcessor(
             historical_window_days=historical_crime_days,
             spatial_tolerance_meters=spatial_tolerance_meters
@@ -101,18 +103,24 @@ class EvidencePipeline:
             edge_to_reports_map=edge_community_map
         )
 
-        # 5. Assistance Facilities Routing (Police & Hospitals)
+        # 5. Pedestrian Infrastructure Classification
+        infra_map = self.infra_processor.process_network_infrastructure(
+            graph=graph,
+            edge_to_reports_map=edge_community_map
+        )
+
+        # 6. Assistance Facilities Routing (Police, Hospitals, Pharmacies)
         if custom_facilities is not None:
             all_facilities = custom_facilities
         else:
             fac_audit = self.facility_adapter.get_facilities(self.study_area)
-            all_facilities = fac_audit.police_stations + fac_audit.hospitals
+            all_facilities = fac_audit.all_facilities if hasattr(fac_audit, "all_facilities") else (fac_audit.police_stations + fac_audit.hospitals)
 
         router = FacilityRouter(graph=graph)
         police_prox = router.compute_facility_distances_for_nodes(all_facilities, "police")
         hospital_prox = router.compute_facility_distances_for_nodes(all_facilities, "hospital")
 
-        # 6. Crime Evidence Ingestion & Spatial Snapping
+        # 7. Crime Evidence Ingestion & Spatial Snapping
         crime_records: List[ValidatedCrimeRecord] = []
         edge_crime_map: Dict[Tuple[int, int, int], List[ValidatedCrimeRecord]] = {}
         crime_summary = None
@@ -181,6 +189,14 @@ class EvidencePipeline:
             light_cls = lighting_map.get(edge_key)
             lit_status = light_cls.lit_status if light_cls else "unmapped"
 
+            # Pedestrian Infrastructure
+            infra_cls = infra_map.get(edge_key)
+            sidewalk_st = infra_cls.sidewalk_status if infra_cls else "unmapped"
+            crossing_st = infra_cls.crossing_status if infra_cls else "unmapped"
+            tactile_pv = infra_cls.has_tactile_paving if infra_cls else None
+            crossing_df = infra_cls.crossing_difficulty if infra_cls else "unknown"
+            infra_summary = infra_cls.to_dict() if infra_cls else {}
+
             # Facilities
             edge_fac = router.get_edge_facility_proximity(u, v, police_prox, hospital_prox)
             pol = edge_fac["police"]
@@ -216,8 +232,12 @@ class EvidencePipeline:
             limitations = []
             if light_cls:
                 limitations.extend(light_cls.limitations)
+            if infra_cls:
+                limitations.extend(infra_cls.limitations)
             if lit_status == "unmapped":
                 limitations.append("Street lighting is unmapped on OpenStreetMap; darkness is not assumed.")
+            if sidewalk_st == "unmapped":
+                limitations.append("Footpath/sidewalk presence is unmapped on OpenStreetMap; absence is not assumed.")
             if pol and pol.is_straight_line:
                 limitations.append("Police access distance is Euclidean straight-line due to disconnected network graph.")
             if hosp and hosp.is_straight_line:
@@ -225,6 +245,7 @@ class EvidencePipeline:
 
             ev_summary = {
                 "lighting": light_cls.to_dict() if light_cls else {"litStatus": "unmapped"},
+                "infrastructure": infra_summary,
                 "policeAccess": pol.to_dict() if pol else None,
                 "hospitalAccess": hosp.to_dict() if hosp else None,
                 "crime": crime_info,
@@ -240,7 +261,7 @@ class EvidencePipeline:
                 coverage=coverage,
                 freshness="fresh",
                 state=state,
-                risk_estimate=f"Evidence state: {state}; Lighting: {lit_status}; Crimes: {crime_cnt}",
+                risk_estimate=f"Evidence state: {state}; Lighting: {lit_status}; Sidewalk: {sidewalk_st}; Crimes: {crime_cnt}",
                 limitations=limitations,
                 attributes=ev_summary,
                 timeline=[],
@@ -250,6 +271,11 @@ class EvidencePipeline:
                 edge_key=k,
                 length_meters=round(edge_len, 1),
                 lit_status=lit_status,
+                sidewalk_status=sidewalk_st,
+                crossing_status=crossing_st,
+                has_tactile_paving=tactile_pv,
+                crossing_difficulty=crossing_df,
+                infrastructure_summary=infra_summary,
                 nearest_police_distance_meters=pol_dist,
                 nearest_police_walking_minutes=pol_time,
                 nearest_hospital_distance_meters=hosp_dist,
@@ -292,6 +318,38 @@ class EvidencePipeline:
                     attributes={"osm_lit": light_cls.osm_lit_value, "lit_status": light_cls.lit_status}
                 )
                 db.add(obs_light)
+                persisted_obs_count += 1
+
+            # Atomic Evidence Observation for Pedestrian Infrastructure
+            if infra_cls and (infra_cls.sidewalk_status != "unmapped" or infra_cls.crossing_status != "unmapped"):
+                obs_infra = EvidenceObservation(
+                    id=f"obs-inf-{segment_id}",
+                    source_id=f"osm-way-inf-{u}-{v}",
+                    source_type="osm_infrastructure",
+                    category="pedestrian_infrastructure",
+                    subcategory=f"sidewalk_{infra_cls.sidewalk_status}",
+                    latitude=coords[0][0] if coords else None,
+                    longitude=coords[0][1] if coords else None,
+                    geometry={"type": "LineString", "coordinates": [[c[1], c[0]] for c in coords]},
+                    segment_id=segment_id,
+                    edge_u=u,
+                    edge_v=v,
+                    edge_key=k,
+                    match_distance_meters=0.0,
+                    match_method="way_attribute",
+                    match_status="matched",
+                    observed_at=now_utc,
+                    ingested_at=now_utc,
+                    source_attribution="© OpenStreetMap contributors",
+                    verification_status="official_osm_attribute",
+                    severity=None,
+                    confidence="high" if infra_cls.sidewalk_status in {"both", "separate"} else "moderate",
+                    data_state=infra_cls.data_state,
+                    provenance="OpenStreetMap Pedestrian Infrastructure Attributes",
+                    limitations=infra_cls.limitations,
+                    attributes=infra_summary
+                )
+                db.add(obs_infra)
                 persisted_obs_count += 1
 
             # Atomic Evidence Observations for Matched Crimes
@@ -368,13 +426,25 @@ class EvidencePipeline:
             f"{persisted_segments_count} segments, {persisted_obs_count} observations persisted."
         )
 
-        # 8. Compute Coverage Metrics
+        # 8. Compute Comprehensive Coverage Metrics
         lit_count = sum(1 for c in lighting_map.values() if c.lit_status == "lit")
         unlit_count = sum(1 for c in lighting_map.values() if c.lit_status == "unlit")
         conflicting_count = sum(1 for c in lighting_map.values() if c.lit_status == "conflicting")
         unmapped_count = sum(1 for c in lighting_map.values() if c.lit_status == "unmapped")
         known_lighting = lit_count + unlit_count
         lighting_pct = round((known_lighting / total_edges * 100.0), 2) if total_edges > 0 else 0.0
+
+        # Pedestrian Infrastructure Coverage Metrics
+        doc_sw_count = sum(1 for c in infra_map.values() if c.sidewalk_status in {"both", "left", "right", "separate"})
+        unmapped_sw_count = sum(1 for c in infra_map.values() if c.sidewalk_status == "unmapped")
+        no_sw_count = sum(1 for c in infra_map.values() if c.sidewalk_status == "none")
+        sw_pct = round((doc_sw_count / total_edges * 100.0), 2) if total_edges > 0 else 0.0
+
+        crossings_count = sum(1 for c in infra_map.values() if c.crossing_status in {"traffic_signals", "marked", "unmarked"})
+        signalized_count = sum(1 for c in infra_map.values() if c.crossing_status == "traffic_signals")
+        tactile_count = sum(1 for c in infra_map.values() if c.has_tactile_paving is True)
+        high_diff_count = sum(1 for c in infra_map.values() if c.crossing_difficulty == "high")
+        hazard_count = sum(1 for c in infra_map.values() if c.has_construction_hazard)
 
         police_acc_count = sum(1 for p in police_prox.values() if p.distance_meters <= 1500.0)
         total_nodes = len(graph.nodes)
@@ -395,27 +465,50 @@ class EvidencePipeline:
             "unlitEdgesCount": unlit_count,
             "conflictingLightingEdgesCount": conflicting_count,
             "unmappedLightingEdgesCount": unmapped_count,
-            "policeStationsCount": len([f for f in all_facilities if f.facility_type == "police"]),
-            "policeAccessibleEdgesCount": police_acc_count,
-            "policeAccessiblePercentage": police_acc_pct,
-            "hospitalsCount": len([f for f in all_facilities if f.facility_type == "hospital"]),
-            "hospitalAccessibleEdgesCount": hosp_acc_count,
-            "hospitalAccessiblePercentage": hosp_acc_pct,
+            "pedestrianInfrastructure": {
+                "documentedSidewalkEdgesCount": doc_sw_count,
+                "documentedSidewalkPercentage": sw_pct,
+                "unmappedSidewalkEdgesCount": unmapped_sw_count,
+                "unmappedSidewalkPercentage": round((unmapped_sw_count / max(total_edges, 1) * 100.0), 2),
+                "absentSidewalkEdgesCount": no_sw_count,
+                "mappedCrossingsCount": crossings_count,
+                "signalizedCrossingsCount": signalized_count,
+                "tactilePavingEdgesCount": tactile_count,
+                "highDifficultyCrossingEdgesCount": high_diff_count,
+                "constructionHazardsCount": hazard_count
+            },
+            "facilities": {
+                "totalCivicPlacesCount": len(all_facilities),
+                "policeStationsCount": len([f for f in all_facilities if f.facility_type == "police"]),
+                "policeAccessibleEdgesCount": police_acc_count,
+                "policeAccessiblePercentage": police_acc_pct,
+                "hospitalsCount": len([f for f in all_facilities if f.facility_type == "hospital"]),
+                "hospitalAccessibleEdgesCount": hosp_acc_count,
+                "hospitalAccessiblePercentage": hosp_acc_pct,
+                "pharmaciesCount": len([f for f in all_facilities if f.facility_type == "pharmacy"]),
+                "transitStopsCount": len([f for f in all_facilities if f.facility_type == "transit"]),
+                "educationalInstitutionsCount": len([f for f in all_facilities if f.facility_type == "education"]),
+                "publicBuildingsCount": len([f for f in all_facilities if f.facility_type == "civic_building"]),
+                "parksCount": len([f for f in all_facilities if f.facility_type == "park"]),
+                "landmarksCount": len([f for f in all_facilities if f.facility_type in {"landmark", "commercial_hub"}])
+            },
             "crimeIncidentsMatched": crime_matched_count,
             "communityReportsMatched": comm_matched_count,
             "dataStateBreakdown": {
-                "present": known_lighting + crime_matched_count + comm_matched_count,
-                "missing": unmapped_count,
+                "present": known_lighting + doc_sw_count + crime_matched_count + comm_matched_count,
+                "missing": unmapped_count + unmapped_sw_count,
                 "conflicting": conflicting_count,
                 "stale": sum(1 for r in community_obs if r.data_state == "stale")
             },
             "dataGaps": [
                 f"{unmapped_count} street segments ({round(unmapped_count/max(total_edges,1)*100, 1)}%) lack explicit OpenStreetMap lighting tags.",
+                f"{unmapped_sw_count} street segments ({round(unmapped_sw_count/max(total_edges,1)*100, 1)}%) have unmapped sidewalk/footpath tags on OpenStreetMap.",
                 "Police incident records lack open street-level GPS point publication in this jurisdiction.",
-                "Facility operational hours and staffed status are unverified in OpenStreetMap POIs."
+                "Facility operational hours, desk staffing, and immediate emergency readiness are unverified in OpenStreetMap POIs."
             ],
             "caveats": [
                 "Missing data is preserved as unmapped/uncertainty and never converted to zero risk or safe lighting.",
+                "Absence of sidewalk tags reflects survey omissions and does not prove absence of walking space.",
                 "Proximity to police stations and hospitals does not guarantee immediate availability or absence of crime.",
                 "Community reports reflect subjective perceptions and do not constitute absolute ground-truth proof."
             ]

@@ -43,6 +43,12 @@ FEEDBACK_CATEGORY_MAPPING = {
     "construction_debris": ("community_hazard", "pathway_obstruction"),
     "waterlogging": ("community_hazard", "drainage_hazard"),
 
+    # Street dog encounters & sightings (Priority 2 & 5)
+    "dog_sighting": ("dog_encounter", "dog_sighting"),
+    "dog_group": ("dog_encounter", "dog_group"),
+    "dog_aggressive": ("dog_encounter", "dog_aggressive"),
+    "dog_bite": ("dog_encounter", "dog_bite"),
+
     # General / Civic
     "routing_quality": ("civic_observation", "routing_quality_feedback"),
     "app_bug": ("civic_observation", "technical_feedback"),
@@ -70,12 +76,17 @@ class ProcessedCommunityObservation:
     is_fixture: bool
     description_summary: str
     limitations: List[str]
+    dog_count: Optional[int] = None
+    is_aggressive: Optional[bool] = None
+    encounter_time: Optional[datetime] = None
     match_result: Optional[SpatialMatchResult] = None
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
         d["observedAt"] = self.observed_at.isoformat()
         d["submittedAt"] = self.submitted_at.isoformat()
+        if self.encounter_time:
+            d["encounterTime"] = self.encounter_time.isoformat()
         return d
 
 
@@ -125,7 +136,11 @@ class CommunityProcessor:
 
             # Distinguish occurrence date from submission date
             created_dt = r.created_at if r.created_at.tzinfo else r.created_at.replace(tzinfo=timezone.utc)
-            observed_dt = created_dt  # Unless specific occurrence time provided in attributes
+            if getattr(r, "encounter_time", None):
+                enc_time = r.encounter_time if r.encounter_time.tzinfo else r.encounter_time.replace(tzinfo=timezone.utc)
+                observed_dt = enc_time
+            else:
+                observed_dt = created_dt
 
             # Moderation vs Certainty: Administrator review verifies policy, not absolute ground truth
             if r.status == "approved":
@@ -149,7 +164,7 @@ class CommunityProcessor:
 
             if lat is not None and lon is not None:
                 for c_lat, c_lon, c_time, c_cat, _ in seen_clusters:
-                    if c_cat == ev_cat:
+                    if c_cat == ev_cat or (ev_cat == "dog_encounter" and c_cat.startswith("dog_")):
                         time_diff = abs((observed_dt - c_time).total_seconds())
                         if time_diff <= (self.duplicate_window_hours * 3600):
                             # Rough coordinate distance check
@@ -188,7 +203,10 @@ class CommunityProcessor:
                 is_duplicate=is_duplicate,
                 is_fixture=is_fix,
                 description_summary=r.description[:120] if r.description else "",
-                limitations=limitations
+                limitations=limitations,
+                dog_count=getattr(r, "dog_count", None),
+                is_aggressive=getattr(r, "is_aggressive", None),
+                encounter_time=getattr(r, "encounter_time", None)
             )
 
             # Spatial Matching to Pedestrian Network

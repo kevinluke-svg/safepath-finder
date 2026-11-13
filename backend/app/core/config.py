@@ -28,6 +28,14 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./safepath.db"
 
+    @field_validator("DATABASE_URL", mode="before")
+    def resolve_sqlite_path(cls, v):
+        if isinstance(v, str) and (v == "sqlite:///./safepath.db" or v == "sqlite:///safepath.db"):
+            backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+            db_path = os.path.join(backend_dir, "safepath.db")
+            return f"sqlite:///{db_path}"
+        return v
+
     # CORS
     CORS_ORIGINS: Union[str, List[str]] = "http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000,http://localhost:8001,http://127.0.0.1:8001"
 
@@ -53,16 +61,21 @@ class Settings(BaseSettings):
     ROUTING_LAMBDA_BALANCED: float = 1.0  # Moderate risk penalty weight
     ROUTING_LAMBDA_SAFETY: float = 3.0  # High risk penalty weight (lambda_safety > lambda_balanced)
     ROUTING_DEFAULT_R_UNKNOWN: float = 0.5  # Modeling prior for unavailable evidence (0.0=optimistic, 1.0=pessimistic)
-    ROUTING_WEIGHT_CRIME: float = 0.35  # Relative indicator weight for crime density
-    ROUTING_WEIGHT_LIGHTING: float = 0.30  # Relative indicator weight for lighting state
-    ROUTING_WEIGHT_COMMUNITY: float = 0.20  # Relative indicator weight for community hazard reports
-    ROUTING_WEIGHT_ASSISTANCE: float = 0.15  # Relative indicator weight for distance to police/hospital
+    ROUTING_MODEL_VERSION: str = "2.0.0"  # Multi-criteria scoring model version
+    ROUTING_DEFAULT_DEPARTURE_PERIOD: str = "evening"  # Default departure period: daytime, evening, night
+    ROUTING_WEIGHT_CRIME: float = 0.25  # Relative indicator weight for crime density (v2.0)
+    ROUTING_WEIGHT_LIGHTING: float = 0.25  # Relative indicator weight for lighting state (v2.0)
+    ROUTING_WEIGHT_COMMUNITY: float = 0.15  # Relative indicator weight for community hazard reports (v2.0)
+    ROUTING_WEIGHT_INFRASTRUCTURE: float = 0.15  # Relative indicator weight for pedestrian infrastructure (v2.0)
+    ROUTING_WEIGHT_DOG: float = 0.15  # Relative indicator weight for verified street dog encounters (v2.0)
+    ROUTING_WEIGHT_ASSISTANCE: float = 0.05  # Relative indicator weight for emergency facility isolation penalty (v2.0)
     ROUTING_MAX_DETOUR_RATIO: float = 1.6  # Maximum acceptable detour multiplier over fastest duration
     ROUTING_MIN_COVERAGE_THRESHOLD: float = 0.30  # Coverage Q below this flags route as insufficient evidence
-    ROUTING_ALTERNATIVE_OVERLAP_THRESHOLD: float = 0.80  # Jaccard edge similarity threshold to filter near-duplicate paths
+    ROUTING_ALTERNATIVE_OVERLAP_THRESHOLD: float = 0.50  # Jaccard/length similarity threshold to filter near-duplicate paths
     ROUTING_MAX_ALTERNATIVES: int = 3  # Maximum distinct loopless alternatives via Yen's algorithm
     ROUTING_MAX_SNAP_DISTANCE_METERS: float = 250.0  # Maximum distance to snap coordinate to pedestrian street network
     ROUTING_NEARBY_CORRIDOR_METERS: float = 500.0  # Spatial proximity threshold (meters) for nearby facilities and landmarks
+    ROUTING_DOG_CORRIDOR_METERS: float = 200.0  # Spatial proximity corridor (meters) for street dog sightings and encounters
     ROUTING_MAX_NEARBY_PLACES: int = 10  # Maximum nearby places to return per route
 
     # Geocoding & Location Search Configuration

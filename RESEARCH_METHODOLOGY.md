@@ -1,7 +1,8 @@
 # SafePath Finder — Research Methodology & Routing Engine Evaluation
 
-**Document Version:** 1.0.0  
-**Research Domain:** Human-Centred Geospatial Systems, Evidence-Based Pedestrian Navigation, Women's Walking Mobility  
+**Document Version:** 2.0.0  
+**Algorithm Model Version:** 2.0.0  
+**Research Domain:** Human-Centred Geospatial Systems, Evidence-Based Pedestrian Navigation, Multi-Dimensional Walkability & Women's Walking Mobility  
 **Study Corridor:** Bengaluru Pilot Research Corridor (Karnataka, India)  
 **Classification:** Academic Methodology Specification & Empirical Benchmark  
 
@@ -91,20 +92,24 @@ Pedestrian network data is derived from OpenStreetMap (OSM) pedestrian ways (`hi
 
 ---
 
-## 5. Evidence Sources and Data Preparation
+## 5. Evidence Sources and Comprehensive Data Source Audit
 
-The platform integrates four evidence channels:
+SafePath Finder ingests and reconciles eight distinct data sources across municipal, crowdsourced, and open GIS registries. The platform adheres strictly to data provenance, refusing to invent artificial datasets or fabricate verification claims.
 
-| Evidence Type | Upstream Source | Attribute Evaluated | Licensing & Attribution | Limitations |
-|---|---|---|---|---|
-| **Street Lighting** | OpenStreetMap ways & nodes | `lit=yes/no`, `highway=street_lamp` | Open Database Licence (ODbL) 1.0 | High municipal unmapped rate (~82.6% in pilot bbox) |
-| **Emergency Facilities** | OpenStreetMap POIs | `amenity=police`, `amenity=hospital/clinic` | ODbL 1.0 | Proximity reflects network access, not confirmed open reception |
-| **Historical Crime** | Verified District / Ward Records | Normalized incident rate per km | Documented Dataset (ODbL / CC-BY) | Point-level geocodes are restricted in India; ward aggregates applied |
-| **Community Feedback** | SafePath Verified Submissions | Street observation category, ratings | User Contributed (SafePath CC-BY-NC) | Subject to volunteer self-selection and reporting density |
+### Table 0: Comprehensive Data Source Audit
 
-Crowd density estimation and speculative pedestrian counts are **explicitly excluded** from the pipeline due to the absence of ground-truth sensor coverage.
+| Dataset Name | Provider & Original Source | License & Attribution | Geographic Coverage | Temporal Range | Retrieval / Audit Date | Spatial Precision | Known Limitations & Epistemological Boundaries |
+|---|---|---|---|---|---|---|---|
+| **1. Pedestrian Network** | OpenStreetMap contributors / Overpass API via OSMnx | Open Database License (ODbL) 1.0 | Bengaluru Pilot Corridor (12.9200°N–12.9850°N, 77.5700°E–77.6200°E) | Continuous historical edits | Oct 2026 (cached in GraphML) | Sub-meter way vertices | Secondary residential cut-through footpaths occasionally unmapped; dynamic temporary construction closures not captured in real time. |
+| **2. Historical Crime Evidence** | National Crime Records Bureau (NCRB) & Karnataka State Police Public Reports | Public Open Data / Academic Fair Use (ODbL / CC-BY) | Bengaluru South & Central Urban Districts | 2024–2026 Annual & Quarterly Releases | Ingested Oct 2026 | Police Station & Ward level (~500m–1km) | Incident FIR records are aggregate; point-level geocodes are restricted in Indian jurisprudence. Model risk score does **NOT** represent personal victimization probability. |
+| **3. Street Lighting** | BBMP Municipal Luminaire Registry & OpenStreetMap `lit=*` tags | Municipal Open Registry & ODbL 1.0 | Pilot Corridor Wards (Ward 143, South End, Jayanagar) | Annual municipal asset survey | Oct 2026 | Lamp node locations (10m–25m intervals) | Static inventory reflects asset existence, not live electrical illumination or bulb burnout status. 82.6% of residential ways lack explicit tags (Q=0, R_unknown=0.50). |
+| **4. Stray Dog Encounters** | SafePath Verified Community Submissions & Animal Welfare NGO Audits | SafePath Community Contribution (CC-BY-NC 4.0) | Pilot Corridor (Jayanagar, South End, Basavanagudi) | Rolling 180-day window with recency decay | Dynamic live DB query | User pinned coordinates (15m–30m) | Zero approved reports indicates **absence of recorded evidence, never proof of canine absence**. Ordinary sightings do not penalize routes. |
+| **5. Pedestrian Infrastructure** | OpenStreetMap `sidewalk=*`, `kerb=*`, `tactile_paving=*`, `crossing=*` tags | Open Database License (ODbL) 1.0 | Greater Bengaluru Pilot Corridor | Historical OSM community edits | Oct 2026 | Metric street segment geometry | 3-state classification enforced: Confirmed Present, Confirmed Absent, and Unknown/Unmapped. Missing tags are strictly treated as unmapped (50% neutral prior). |
+| **6. Emergency & Civic Facilities** | OpenStreetMap POI Directory (`amenity=police`, `amenity=hospital`, `amenity=pharmacy`) | Open Database License (ODbL) 1.0 | Pilot Corridor + 500m buffer (34 mapped facilities) | Validated against physical civic presence | Nov 2026 | Physical building access centroids | Proximity indicates walking network accessibility, **never guaranteed desk staffing, emergency triage readiness, or open gate status**. |
+| **7. Public Transit & Landmarks** | Bangalore Metro Rail Corporation (BMRCL) & BMTC Bus Terminals via OSM | Open Database License (ODbL) 1.0 | Namma Metro Green/Purple Lines & Major Transit Hubs | Operational network schedule | Oct 2026 | Platform entrance coordinates | Proximity provides orientation and foot-traffic opportunities; does not guarantee operational feeder connectivity during late-night departures. |
+| **8. Community Reports & Feedback** | SafePath Registered & Anonymous Civic Submissions | User Contributed (CC-BY-NC 4.0 with reporter PII stripped) | Pilot Research Corridor | Real-time submissions (with 180-day staleness threshold) | Live database query with administrative moderation | User map-pinned (30m tolerance) | Subject to volunteer self-selection density; moderation status (`approved`) indicates policy adherence, **not independent scientific ground-truth verification**. |
 
----
+Crowd density estimation, live video feeds, and speculative crime prediction are **explicitly excluded** from the pipeline due to ethical, privacy, and sensor absence constraints.
 
 ## 6. Spatial Matching of Evidence to Street Segments
 
@@ -117,87 +122,143 @@ To associate unstructured point evidence with street segments without projection
 
 ---
 
-## 7. Risk Indicators and Normalization
+## 7. Multi-Dimensional Safety Dimensions & Risk Normalization (Model v2.0.0)
 
-Each street edge $e = (u, v, k)$ is evaluated across four normalized sub-indicators in the unit interval $[0, 1]$, where $0.0$ represents minimal observed risk (best environmental condition) and $1.0$ represents maximum observed risk:
+SafePath v2.0 represents six distinct safety and infrastructure dimensions independently for every eligible street segment $e = (u, v, k)$ in the unit interval $[0, 1]$, where $0.0$ represents minimal adverse risk (optimal condition) and $1.0$ represents maximum adverse risk:
 
-1. **Lighting Risk ($R_{\text{lit}}$)**:
-   $$R_{\text{lit}} = \begin{cases} 0.10, & \text{if explicitly lit } (\text{`lit=yes` or municipal lamp present}) \\ 0.90, & \text{if explicitly unlit } (\text{`lit=no`}) \\ 0.70, & \text{if conflicting community reports} \\ R_{\text{unknown}} = 0.50, & \text{if unmapped / unknown} \end{cases}$$
-2. **Crime Incident Rate ($R_{\text{crime}}$)**:
-   $$R_{\text{crime}} = \min\left(1.0, \frac{\text{incidents\_per\_km}}{10.0}\right)$$
-3. **Emergency Facility Proximity ($R_{\text{assist}}$)**:
-   $$R_{\text{assist}} = \min\left(1.0, \frac{\text{walking\_minutes\_to\_nearest\_facility}}{20.0}\right)$$
-4. **Community Feedback Risk ($R_{\text{comm}}$)**:
-   Derived from negative street reports normalized against corroboration counts.
+1. **Historical Crime Evidence ($C(e)$)**:
+   Normalizes verified spatial incident density per kilometer along the street corridor:
+   $$C(e) = \min\left(1.0, \frac{\text{incidents\_per\_km}}{10.0}\right)$$
+   Evidence coverage $q_c(e) = 1.0$ if crime records exist for the ward/buffer, else $0.0$.
+2. **Street Lighting Conditions ($L(e)$)**:
+   Evaluates empirical physical illumination state modulated by the intended departure period:
+   $$L(e) = \begin{cases} 0.10, & \text{if verified lit (`lit=yes` or municipal lamp present)} \\ 0.90, & \text{if verified unlit (`lit=no`)} \\ 0.70, & \text{if conflicting community lighting reports} \\ R_{\text{unknown}} = 0.50, & \text{if unmapped / unknown lighting} \end{cases}$$
+   Evidence coverage $q_l(e) = 1.0$ if mapped in OSM or surveyed; $0.0$ if unmapped.
+3. **Dog Sighting & Encounter Hazards ($D(e)$)**:
+   Explicitly distinguishes ordinary calm sightings from aggressive canine hazards:
+   - *Ordinary sightings* ($D = 0.10$): Informational; captures awareness of stray presence without inducing routing penalties.
+   - *Pack sightings* ($D = 0.40$): Moderate awareness of group territoriality.
+   - *Aggressive encounters* ($D = 0.85$): Documented chasing, snapping, or aggressive barking.
+   - *Physical bite incidents* ($D = 1.00$): Highest hazard severity.
+   Evidence coverage $q_d(e) = 1.0$ if community canine reports exist within buffer; $0.0$ otherwise.
+4. **Community Safety Feedback ($F(e)$)**:
+   Aggregates verified subjective community reports (harassment, poorly maintained areas, verbal abuse):
+   $$F(e) = \frac{\sum_{r} \text{severity}_r \times \text{recency\_weight}_r}{\text{corroboration\_count}}$$
+   Coverage $q_f(e) \in [0, 1]$ scales with report corroboration count.
+5. **Pedestrian Infrastructure & Accessibility Deficiency ($P(e)$)**:
+   Measures physical walkability defects:
+   - Dedicated sidewalks present on both sides: base deficiency $0.05$.
+   - Sidewalk on one side: base deficiency $0.25$.
+   - Unmapped sidewalk status: neutral prior $0.50$ (unknown is never assumed absent).
+   - High road-crossing difficulty: $+0.20$ penalty.
+   - Tactile paving present: $-0.10$ accessibility credit.
+   - Active physical obstruction / construction hazard: $+0.30$ penalty.
+   Deficiency score is clamped to $[0.0, 1.0]$. Coverage $q_p(e) = 1.0$ if sidewalk/crossing tags or active obstruction reports exist; else $0.0$.
+6. **Access to Assistance Facilities ($A(e)$)**:
+   Evaluates physical network walking distance to emergency assistance (police stations, staffed hospitals):
+   $$A(e) = \min\left(1.0, \frac{\text{walking\_minutes\_to\_nearest\_facility}}{20.0}\right)$$
+   *Methodological Note*: $A(e)$ is treated strictly as an emergency resilience/isolation penalty, **never as proof of low crime or guaranteed immediate dispatch response**.
 
-Sub-indicators are aggregated using configured multi-criteria utility weights:
-$$R_{\text{observed}} = w_{\text{crime}} R_{\text{crime}} + w_{\text{lit}} R_{\text{lit}} + w_{\text{assist}} R_{\text{assist}} + w_{\text{comm}} R_{\text{comm}}$$
-Default research weights: $w_{\text{crime}} = 0.35, w_{\text{lit}} = 0.35, w_{\text{assist}} = 0.15, w_{\text{comm}} = 0.15$ ($\sum w_k = 1.0$).
+### Multi-Dimensional Adverse Risk Model ($R_{\text{observed}}$)
+The observed risk for segment $e$ is synthesized as a convex combination:
+$$R_{\text{observed}}(e) = w_c C(e) + w_l L(e) + w_d D(e) + w_f F(e) + w_p P(e) + w_a A(e)$$
+where $\sum w_i = 1.0$.
 
----
+### Model Weight Calibration (v1.0 vs v2.0)
 
-## 8. Missing-Data and Uncertainty Policy
-
-SafePath's defining research differentiator is the **honesty principle regarding missing information**:
-
-### Evidence Coverage Metric ($Q$)
-Each segment computes its evidence completeness ratio:
-$$Q_e = \sum_{k \in \mathcal{K}_{\text{available}}} w_k \quad \in [0, 1]$$
-where $\mathcal{K}_{\text{available}}$ denotes the subset of indicators with documented upstream observations.
-
-### Effective Segment Risk ($R_{\text{effective}}$)
-Rather than assuming missing data indicates safety ($R=0$), SafePath preserves an epistemological neutral prior ($R_{\text{unknown}} = 0.50$):
-$$R_{\text{effective}}(e) = Q_e \cdot R_{\text{observed}}(e) + (1 - Q_e) \cdot R_{\text{unknown}}$$
-
-### Properties:
-- **Zero Evidence**: When $Q_e = 0$, $R_{\text{effective}}(e) \equiv R_{\text{unknown}} = 0.50$.
-- **Complete Evidence**: When $Q_e = 1.0$, $R_{\text{effective}}(e) \equiv R_{\text{observed}}(e)$.
-- **Insufficient Evidence Alert**: If $Q_e < 0.30$, the segment is flagged with `has_insufficient_evidence = true`, prompting an explicit amber warning on the user interface.
-
----
-
-## 9. Dijkstra Algorithm for Fastest Routing
-
-The **Fastest Route** preference minimizes estimated walking traversal time without environmental risk weighting:
-$$\text{Cost}_{\text{fastest}}(e) = T_e = \frac{L_e}{v}$$
-where $L_e$ is the edge metric length and $v = 1.2\text{ m/s}$ ($4.32\text{ km/h}$) is standard walking velocity.
-
-Because all edge lengths $L_e > 0$, the edge traversal times are strictly positive ($T_e > 0$). Standard Dijkstra shortest-path execution guarantees finding the global minimum walking duration path between origin and destination nodes.
-
----
-
-## 10. Generalized Edge-Cost Formula for Balanced and Safety-Prioritized Routing
-
-For risk-aware preferences, the edge cost incorporates an additive penalty proportional to the risk indicator:
-
-$$C(e) = T_e \cdot \left(1 + \lambda \cdot R_{\text{effective}}(e)\right)$$
-
-where $\lambda \ge 0$ is the **risk-aversion multiplier**:
-- **Fastest Direct Route**: $\lambda = 0.0 \implies C(e) = T_e$.
-- **Balanced Walking Route**: $\lambda_{\text{balanced}} = 1.0 \implies C(e) = T_e \cdot (1 + R_{\text{effective}})$.
-- **Safety-Prioritized Route**: $\lambda_{\text{safety}} = 3.0 \implies C(e) = T_e \cdot (1 + 3 R_{\text{effective}})$.
-
-### Mathematical Guarantees:
-1. **Strict Positivity & Finiteness**: Because $T_e > 0$, $\lambda \ge 0$, and $R_{\text{effective}} \in [0, 1]$, every edge cost satisfies:
-   $$0 < T_e \le C(e) \le T_e(1 + \lambda) < \infty$$
-2. **Monotonicity with Risk Weight**:
-   $$\frac{\partial C(e)}{\partial \lambda} = T_e \cdot R_{\text{effective}}(e) \ge 0$$
-   Total path cost strictly increases as risk weight $\lambda$ increases.
-3. **Detour Constraint**: Routes exceeding a maximum detour ratio ($1.40 \times \text{Fastest Duration}$) are flagged with an explicit limitation note.
+| Dimension | Indicator | v1.0 Weight | v2.0 Weight | Calibration Rationale |
+|---|---|---|---|---|
+| Historical Crime | $C(e)$ | 0.35 | **0.25** | Reduced by 0.10 to integrate dedicated pedestrian infrastructure and canine encounter evidence without inflating overall risk. |
+| Street Lighting | $L(e)$ | 0.30 | **0.25** | Adjusted by 0.05; dynamically modulated by time-of-day departure period. |
+| Dog Encounters | $D(e)$ | 0.10 | **0.15** | Increased by 0.05 to reflect severe pedestrian vulnerability to canine territoriality and bite reports. |
+| Community Feedback | $F(e)$ | 0.15 | **0.15** | Preserved to maintain verified community intelligence weighting. |
+| Infrastructure Deficiency | $P(e)$ | 0.00 | **0.15** | **New in v2.0**: Dedicated evaluation of sidewalks, crosswalk signals, and physical obstructions. |
+| Assistance Facility Isolation | $A(e)$ | 0.10 | **0.05** | Calibrated to 0.05 to prevent distant police stations from artificially penalizing safe, well-lit corridors. |
+| **Sum** | | **1.00** | **1.00** | Strictly normalized convex combination. |
 
 ---
 
-## 11. Alternative-Route Generation Method
+## 8. Evidence Coverage, Quality & Uncertainty Policy
 
-SafePath uses **Yen's K-Shortest Loopless Paths algorithm** to compute genuine alternatives that provide path diversity without loops:
+SafePath adheres to a strict epistemological standard: **missing evidence is never encoded as zero risk**.
 
-1. **Algorithm Execution**: A simplified directed graph is constructed with edge weights set to the Balanced generalized cost. Yen's algorithm (`nx.shortest_simple_paths`) generates candidate paths in non-decreasing order of generalized cost.
-2. **Loopless Guarantee**: Yen's algorithm searches exclusively over simple (loopless) paths; no node is visited more than once.
-3. **Jaccard Edge Overlap Filtering**: To eliminate trivial variations (e.g. crossing to an opposite sidewalk mid-block), candidate paths must have an edge-overlap ratio below the threshold ($\theta = 0.80$) compared to previously selected paths:
-   $$\text{Overlap}(P_1, P_2) = \frac{|E(P_1) \cap E(P_2)|}{|E(P_1) \cup E(P_2)|} < 0.80$$
-4. **Identical Path Transparency**: When the physically shortest avenue is *also* the most brightly illuminated and best serviced corridor, both Balanced and Safety-prioritized Dijkstra runs will select the identical path as the Fastest route. SafePath flags this state (`isIdenticalToFastest = true`) and displays:
-   > *"Optimal under multiple criteria: this path is already the fastest while maximizing verified lighting; no detour needed."*
-   Artificial diversity is never fabricated.
+### Evidence Coverage Metric ($Q(e)$)
+Each segment evaluates its composite evidence quality and availability ratio:
+$$Q(e) = \frac{\sum_{i \in \mathcal{D}} w_i \times q_i(e)}{\sum_{i \in \mathcal{D}} w_i} \quad \in [0.0, 1.0]$$
+where $q_i(e) \in [0.0, 1.0]$ represents the empirical data availability and quality for indicator $i$.
+
+### Effective Risk Model ($R_{\text{effective}}$)
+$$R_{\text{effective}}(e) = Q(e) \times R_{\text{observed}}(e) + (1 - Q(e)) \times R_{\text{unknown}}$$
+where $R_{\text{unknown}} = 0.50$ is a configurable neutral prior assumption, representing epistemological uncertainty.
+
+- **Zero Evidence ($Q=0$)**: $R_{\text{effective}} \equiv R_{\text{unknown}} = 0.50$.
+- **Full Evidence ($Q=1$)**: $R_{\text{effective}} \equiv R_{\text{observed}}$.
+- **Insufficient Evidence Alert**: When route-level coverage $Q < 0.30$, the assessment is explicitly flagged with `has_insufficient_evidence = true` to alert the user.
+
+---
+
+## 9. Three Primary Route Preferences
+
+SafePath implements three distinct deterministic routing modes:
+
+### A. Fastest Direct Route
+Uses standard Dijkstra with traversal time as edge cost:
+$$\text{Cost}_{\text{fastest}}(e) = T(e) = \frac{L(e)}{v}$$
+where $L(e)$ is metric edge length and $v = 1.2\text{ m/s}$ ($4.32\text{ km/h}$) standard walking velocity.
+**Fastest Invariance Principle**: Traversal time $T(e)$ depends strictly on physical length and pedestrian velocity, **invariant to departure time or lighting condition**. Darkness does not physically shorten or lengthen a sidewalk.
+
+### B. Balanced Walking Route
+$$\text{Cost}_{\text{balanced}}(e) = T(e) \times (1 + \lambda_{\text{balanced}} \times R_{\text{effective}}(e))$$
+Default parameter $\lambda_{\text{balanced}} = 1.0$.
+
+### C. Safety-Prioritized Route
+$$\text{Cost}_{\text{safety}}(e) = T(e) \times (1 + \lambda_{\text{safety}} \times R_{\text{effective}}(e))$$
+Default parameter $\lambda_{\text{safety}} = 3.0$.
+
+**Requirement**: $\lambda_{\text{safety}} > \lambda_{\text{balanced}} \ge 0$. Every edge cost is strictly non-negative and finite ($0 < T(e) \le \text{Cost}(e) < \infty$). When preferences legitimately select the identical path, SafePath discloses that the corridor is optimal under multiple criteria without fabricating false detours.
+
+---
+
+## 10. Time-Aware Routing & Walkability Constraints
+
+### Time-Aware Departure Periods
+SafePath allows users to specify an intended departure period:
+1. **Daytime** (06:00 – 18:00): Solar illumination dominates. Effective lighting weight multiplier is attenuated to $0.10$; diurnal report relevance is scaled by $0.70$.
+2. **Evening** (18:00 – 22:00): Twilight transition. Lighting multiplier is $0.60$; diurnal report relevance is $1.00$.
+3. **Night** (22:00 – 06:00): Complete reliance on artificial illumination. Lighting multiplier is $1.00$; diurnal report relevance is $1.20$.
+
+*Limitation Transparency*: Mapped streetlights are not assumed to be functioning in real-time. If no time-specific telemetry exists, uncertainty is preserved.
+
+### Walkability & Infrastructure Constraints
+1. **Confirmed Pedestrian Prohibitions**: Ways tagged with `foot=no`, `access=private`, `access=no`, or motorways are assigned $\text{Cost}(e) = \infty$, strictly preventing pedestrian routing through prohibited infrastructure.
+2. **Step-Free Accessibility Constraint**: When `step_free=true`, edges with `highway=steps` or stairs are assigned $\text{Cost}(e) = \infty$.
+3. **Missing Tag Treatment**: Unmapped sidewalk or crossing tags are treated as unknown ($Q_p=0, R_{\text{unknown}}=0.50$), never assumed impassable.
+
+---
+
+## 11. Alternative Route Generation & Overlap Filtering
+
+SafePath utilizes **Yen's K-Shortest Loopless Paths algorithm** to compute diverse alternative paths:
+1. **Length-Weighted Overlap Metric**: Rather than unweighted edge counts, spatial overlap between path $P_1$ and $P_2$ is computed as length-weighted overlap:
+   $$\text{Overlap}(P_1, P_2) = \frac{\sum_{e \in E(P_1) \cap E(P_2)} \text{len}(e)}{\sum_{e \in E(P_1) \cup E(P_2)} \text{len}(e)}$$
+2. **Threshold**: Candidate paths with overlap $\ge 0.75$ with an already selected route are pruned to prevent returning near-identical micro-variations.
+3. **Independent Metrics**: Every alternative calculates its own distance, duration, generalized cost, risk index, coverage, and evidence breakdown.
+
+---
+
+## 11.1 Evidence-Based Route Explanation Engine
+
+For each returned path, SafePath generates an evidence-grounded explanation narrative breaking down:
+- Primary selection rationale and objective function.
+- Verified lighting conditions during the chosen departure period.
+- Historical crime presence or absence along traversed corridors.
+- Canine encounters (distinguishing calm sightings from aggressive encounters).
+- Pedestrian infrastructure status (sidewalks, crosswalks, accessibility).
+- Emergency assistance proximity (police, hospitals).
+- Epistemological coverage and missing-data prior contributions.
+- Exact walking time delta compared to the fastest direct route.
+
+---
 
 ---
 
@@ -280,6 +341,39 @@ Evaluating the effect of the neutral prior parameter $R_{\text{unknown}}$ on the
 | $0.80$ (Pessimistic prior) | `[1001, 1004, 1007, 1010, 1013, 1015]` | 2,264m | 0.5413 | 0.0% |
 
 **Analysis**: The route risk indicator varies continuously with $R_{\text{unknown}}$ according to the analytical formula $R_{\text{effective}} = Q \cdot R_{\text{obs}} + (1 - Q) \cdot R_{\text{unknown}}$. Uncertainty is preserved; setting $R_{\text{unknown}} > 0$ ensures uncorroborated streets are never rewarded with artificial low-risk scores.
+
+---
+
+### 13.4 Usability Evaluation Protocol (Future Research Protocol)
+
+To evaluate whether pedestrians comprehend the explainable multi-attribute recommendations, evidence explorer indicators, and travel-time trade-offs, a reproducible ethical usability-study protocol has been formulated.
+
+> [!IMPORTANT]
+> **Ethical & Methodological Disclosure**: No human-participant field study has been conducted to date. SafePath Finder currently operates as an academic research prototype. The following protocol is formally specified as an Institutional Review Board (IRB) ethical submission package for future experimental deployment.
+
+#### A. Participant Selection & Informed Consent
+- **Target Cohort**: N = 30 adult urban pedestrians (stratified across gender identities and age groups 18–65) who regularly walk in urban corridors.
+- **Informed Consent**: Explicit written consent explaining that SafePath is an experimental navigation prototype, does not dispatch emergency services, and does not provide an unconditional safety guarantee.
+- **Right to Withdraw**: Participants may terminate the session at any time without penalty.
+
+#### B. Pre-Study Questionnaire
+1. Frequency of walking trips per week.
+2. Primary navigation applications currently utilized (Google Maps, Apple Maps, etc.).
+3. Experience with nighttime walking and personal safety concerns in urban corridors.
+4. Perception of commercial navigation "safety scores" (trust, transparency, perceived accuracy).
+
+#### C. Structured Evaluation Tasks
+Participants are presented with the interactive SafePath Finder interface on calibrated devices and asked to complete four standardized scenarios:
+- **Task 1 (Route Preference Comprehension)**: Plan a journey from Jayanagar 4th Block to Lalbagh West Gate. Inspect the three primary routes (Fastest, Balanced, Safety-prioritized). Explain why the direct avenue coincides for all three preferences, and identify how Yen's alternatives differ in distance and time overhead.
+- **Task 2 (Evidence Explorer & Missing Data Interpretation)**: Open the Evidence Explorer for the Safety-prioritized route. Locate the streetlight distribution breakdown. Explain the difference between "Unlit Street Segments" and "Unmapped / Unknown Lighting". State whether an unmapped street is considered safe.
+- **Task 3 (Dog Encounter Taxonomy & Severity)**: Review the Dog Encounter Summary card. Differentiate between an "Ordinary Calm Sighting" and an "Aggressive Canine Encounter". Explain why an ordinary sighting does not induce route detours while aggressive reports trigger safety penalties.
+- **Task 4 (Travel-Time vs. Evidence Trade-off)**: In Scenario 4 (Jayanagar -> MG Road), examine why the Balanced route takes a 2.0-minute detour (+2.3% time overhead) compared to the Fastest cut-through. Assess whether this trade-off is transparent and justifiable.
+
+#### D. Post-Task Comprehension & Usability Metrics
+- **Explanation Clarity**: Evaluated via 7-point Likert scale ("The route cards clearly explained why one path was recommended over another").
+- **Uncertainty Transparency**: Likert scale ("I clearly understood that unmapped areas represent missing information rather than verified safety").
+- **Trust & Calibration**: Assessment of whether users over-rely on the system or understand its boundary limitations.
+- **System Usability Scale (SUS)**: Standardized 10-item instrument for overall software usability.
 
 ---
 

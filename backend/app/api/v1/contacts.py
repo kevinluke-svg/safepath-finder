@@ -1,17 +1,19 @@
-from datetime import datetime, timezone
-from typing import List, Any
+import secrets
+from datetime import datetime, timezone, timedelta
+from typing import List, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
-from app.models.contact import TrustedContact, JourneyShare, ArrivalConfirmation
+from app.models.contact import TrustedContact, JourneyShare, ArrivalConfirmation, JourneySession
 from app.core.encryption import encrypt_field, decrypt_field, mask_phone_number
 from app.schemas.contact import (
     TrustedContactCreate, TrustedContactUpdate, TrustedContactResponse,
     JourneyShareRequest, JourneyShareResponse,
-    ArrivalConfirmationRequest, ArrivalConfirmationResponse
+    ArrivalConfirmationRequest, ArrivalConfirmationResponse,
+    JourneySessionStartRequest, JourneySessionResponse, PublicJourneyShareView
 )
 from app.schemas.auth import GenericResponse
 from app.services.audit_service import record_audit_log
@@ -264,3 +266,240 @@ def confirm_arrival(
         deliveryStatus="pending_provider_integration",
         message="Arrival recorded on server. Automatic SMS/WhatsApp alerts require SMS gateway integration."
     )
+
+
+# -----------------------------------------------------------------------------
+# Phase 3: Active Journey Sharing Sessions & Public Viewing
+# -----------------------------------------------------------------------------
+def _format_journey_session_response(sess: JourneySession) -> JourneySessionResponse:
+    return JourneySessionResponse(
+        id=sess.id,
+        token=sess.token,
+        origin=sess.origin,
+        destination=sess.destination,
+        routeName=sess.route_name,
+        routeId=sess.route_id,
+        etaMinutes=sess.eta_minutes,
+        distanceMeters=sess.distance_meters,
+        status=sess.status,
+        consentGiven=sess.consent_given,
+        startedAt=sess.started_at,
+        expectedArrivalAt=sess.expected_arrival_at,
+        completedAt=sess.completed_at,
+        expiresAt=sess.expires_at,
+        isRevoked=sess.is_revoked,
+        contactCount=sess.contact_count,
+        shareUrl=f"/safepath_pro.html?share_token={sess.token}",
+        reminderMinutesBefore=5,
+        notificationMode=sess.notification_mode
+    )
+
+
+@router.post("/journey-sessions/start", response_model=JourneySessionResponse, status_code=status.HTTP_201_CREATED)
+def start_journey_session(
+    payload: JourneySessionStartRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Start an active journey sharing session with voluntary consent.
+    Generates a cryptographically secure token for designated trusted contacts.
+    """
+    if not payload.consentGiven:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Voluntary consent is required to share your journey itinerary and ETA."
+        )
+
+    now = datetime.now(timezone.utc)
+    expected_arrival = now + timedelta(minutes=payload.etaMinutes)
+    expires = expected_arrival + timedelta(hours=2)
+    token = secrets.token_urlsafe(24)
+
+    session = JourneySession(
+        user_id=current_user.id,
+        token=token,
+        origin=payload.origin.strip(),
+        destination=payload.destination.strip(),
+        route_name=payload.routeName.strip(),
+        route_id=payload.routeId.strip(),
+        eta_minutes=payload.etaMinutes,
+        distance_meters=payload.distanceMeters or 0,
+        status="active",
+        consent_given=True,
+        contact_count=max(len(payload.contactIds), 1),
+        contact_ids=",".join(payload.contactIds) if payload.contactIds else "",
+        started_at=now,
+        expected_arrival_at=expected_arrival,
+        expires_at=expires,
+        is_revoked=False,
+        reminder_sent=False,
+        overdue_notified=False,
+        notification_mode="simulated_development"
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+
+    record_audit_log(
+        db=db,
+        action="Journey Session Started",
+        record=f"Session {session.id} for user {current_user.id} -> {session.destination} (ETA: {session.eta_minutes}m)",
+        actor=current_user.name,
+        actor_id=current_user.id,
+        actor_role=current_user.role
+    )
+
+    return _format_journey_session_response(session)
+
+
+@router.post("/journey-sessions/{session_id}/check-in", response_model=JourneySessionResponse)
+def check_in_journey_arrival(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
+    """Check in safely upon reaching destination. Completes the active session."""
+    session = db.query(JourneySession).filter(JourneySession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journey session not found.")
+    if session.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized to check in for this session.")
+    if session.status == "completed":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Journey session is already completed.")
+
+    now = datetime.now(timezone.utc)
+    session.status = "completed"
+    session.completed_at = now
+    db.commit()
+    db.refresh(session)
+
+    record_audit_log(
+        db=db,
+        action="Journey Safe Check-in",
+        record=f"Session {session.id} completed safely by {current_user.name}",
+        actor=current_user.name,
+        actor_id=current_user.id,
+        actor_role=current_user.role
+    )
+
+    return _format_journey_session_response(session)
+
+
+@router.post("/journey-sessions/{session_id}/cancel", response_model=JourneySessionResponse)
+def cancel_journey_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
+    """Revoke or end active journey sharing."""
+    session = db.query(JourneySession).filter(JourneySession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journey session not found.")
+    if session.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized to cancel this session.")
+
+    now = datetime.now(timezone.utc)
+    session.status = "cancelled"
+    session.is_revoked = True
+    session.revoked_at = now
+    db.commit()
+    db.refresh(session)
+
+    record_audit_log(
+        db=db,
+        action="Journey Session Cancelled",
+        record=f"Session {session.id} cancelled/revoked by {current_user.name}",
+        actor=current_user.name,
+        actor_id=current_user.id,
+        actor_role=current_user.role
+    )
+
+    return _format_journey_session_response(session)
+
+
+@router.get("/journey-sessions/active", response_model=List[JourneySessionResponse])
+def get_active_journey_sessions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
+    """List active, unexpired journey sharing sessions for the authenticated user."""
+    now = datetime.now(timezone.utc)
+    sessions = db.query(JourneySession).filter(
+        JourneySession.user_id == current_user.id,
+        JourneySession.status == "active",
+        JourneySession.is_revoked == False,
+        JourneySession.expires_at >= now
+    ).order_by(desc(JourneySession.started_at)).all()
+
+    return [_format_journey_session_response(s) for s in sessions]
+
+
+@router.get("/journey-shares/public/{token}", response_model=PublicJourneyShareView)
+def get_public_journey_share_view(
+    token: str,
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Public tokenized view for trusted contacts.
+    Exposes itinerary, ETA, and arrival status WITHOUT leaking user identity, email, or contacts.
+    """
+    session = db.query(JourneySession).filter(JourneySession.token == token).first()
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shared journey not found or token has expired.")
+
+    now = datetime.now(timezone.utc)
+    exp_at = session.expected_arrival_at
+    if exp_at and exp_at.tzinfo is None:
+        exp_at = exp_at.replace(tzinfo=timezone.utc)
+
+    if session.is_revoked or session.status == "cancelled":
+        current_status = "cancelled"
+        is_overdue = False
+    elif session.status == "completed":
+        current_status = "completed"
+        is_overdue = False
+    elif exp_at and now > exp_at:
+        current_status = "overdue"
+        is_overdue = True
+    else:
+        current_status = "active"
+        is_overdue = False
+
+    return PublicJourneyShareView(
+        token=session.token,
+        origin=session.origin,
+        destination=session.destination,
+        routeName=session.route_name,
+        etaMinutes=session.eta_minutes,
+        distanceMeters=session.distance_meters,
+        status=current_status,
+        startedAt=session.started_at,
+        expectedArrivalAt=session.expected_arrival_at,
+        completedAt=session.completed_at,
+        isOverdue=is_overdue
+    )
+
+
+@router.post("/journey-sessions/{session_id}/simulate-reminder", response_model=GenericResponse)
+def simulate_journey_reminder(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
+    """Simulate arrival countdown reminder (for development and demonstration)."""
+    session = db.query(JourneySession).filter(JourneySession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found.")
+    if session.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized access.")
+
+    session.reminder_sent = True
+    db.commit()
+
+    return GenericResponse(
+        status=200,
+        message=f"[SIMULATED ALERT] Reminder sent for journey to {session.destination}. Expected arrival at {session.expected_arrival_at.strftime('%H:%M UTC')}.",
+        success=True
+    )
+

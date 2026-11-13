@@ -260,12 +260,13 @@ class GeocodingService:
     def search_local_landmarks(self, norm_query: str, limit: int = 5) -> List[GeocodingResult]:
         """Matches local corridor landmarks to provide instant, offline-capable results."""
         results: List[GeocodingResult] = []
-        if not norm_query or len(norm_query) < 2:
+        clean_query = self.normalize_query(norm_query) if norm_query else ""
+        if not clean_query or len(clean_query) < 2:
             return results
 
         # 1. Exact or prefix matches
         for key, data in CORRIDOR_LANDMARKS.items():
-            if key == norm_query or key.startswith(norm_query) or norm_query in key:
+            if key == clean_query or key.startswith(clean_query) or clean_query in key:
                 lat = data["latitude"]
                 lon = data["longitude"]
                 in_study = self.study_area.contains_point(lat, lon)

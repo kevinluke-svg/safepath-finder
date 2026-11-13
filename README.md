@@ -544,11 +544,28 @@ Executes all 13 core user and administrative journeys in a single continuous det
 5. Detection and user-facing explanation of routes identical to the fastest baseline.
 6. Absolute exclusion of personally identifiable information (PII) from route geometries and segment properties.
 
-#### 5. Frontend DOM & CSS Contract Tests (`tests/test_frontend_route_integration.py`)
+#### 6. Phase 3 Explainable Map Experience & Journey Protection (`tests/test_phase3_explainable_experience.py`)
 
-Verifies DOM selectors, location search autocomplete containers, responsive CSS design rules, category badges, epistemological uncertainty banners, and live API client configurations without requiring external browser dependencies.
+1. `test_map_layers_bundle_structure_and_legends`: Validates `GET /api/v1/evidence/map-layers` returning all 7 geospatial feature collections (facilities, landmarks, dogs, reports, lighting, pedestrian infra, crime observations) alongside 4 structured legend categories (Mapped Data, Community Reports, Inferred Values, Unknown Info) and safety disclaimers.
+2. `test_street_segment_inspection_multidimensional_evidence`: Validates Dijkstra router segment payloads delivering all 13 distinct physical and epistemological dimensions (street name, length, walking time, crime evidence, lighting status, dog encounters, pedestrian infrastructure, open establishments, police/transit proximity, community reports, coverage $Q(e)$, uncertainty prior $R_{\text{unknown}}$, unmapped status) without collapsing them into an unexplained synthetic score.
+3. `test_departure_period_routing_behavior_and_limitations`: Validates dynamic time-of-day penalty adaptation across Daytime, Evening, and Night, ensuring daylight reduces darkness sensitivity while evening/night heavily penalizes unlit corridors without asserting live bulb status.
+4. `test_independent_report_confirmations_and_outdated_flags`: Validates `POST /reports/{id}/confirm` and `POST /reports/{id}/outdated` tracking separate counters, preventing author self-endorsement, allowing vote retractions, and maintaining idempotency.
+5. `test_user_report_status_and_mine_endpoint`: Validates `GET /reports/mine` returning traveler report histories with moderation lifecycle tracking.
+6. `test_trusted_contact_journey_session_lifecycle`: Validates complete lifecycle of `JourneySession` from voluntary consent creation, live ETA countdown, 5-minute reminder simulation, safe arrival check-in, to cancellation.
+7. `test_public_journey_share_token_access_and_zero_pii_leak`: Validates `GET /journey-shares/public/{token}` for non-authenticated contacts, strictly proving zero leakage of traveler user ID, email, phone, or trusted contact identities.
+8. `test_peer_reassurance_boundaries_and_no_emergency_claims`: Asserts explicit disclaimers across all journey endpoints confirming SafePath does not dispatch emergency services and missed check-ins do not prove an emergency.
 
 ---
+
+### Complete Pytest Test Suite (210 Passing Tests)
+
+The full test suite covers 210 automated tests across 27 modules:
+
+```bash
+cd "safe path/backend"
+PYTHONPATH=. ../.venv/bin/pytest tests/ -q
+# Output: 210 passed in ~73s
+```
 
 ### Running the Research Methodology Evaluation Script
 

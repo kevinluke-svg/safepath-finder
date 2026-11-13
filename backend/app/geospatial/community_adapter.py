@@ -27,6 +27,11 @@ class CommunityIncident:
     created_at: str
     corroborations: int
     is_fixture: bool
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    encounter_time: Optional[datetime] = None
+    dog_count: Optional[int] = None
+    is_aggressive: Optional[bool] = None
     # Note: Strictly NO reporter_name, user_id, email, phone, or IP address
 
     def to_dict(self) -> Dict[str, Any]:
@@ -45,6 +50,10 @@ class CommunityAuditResult:
     categories_breakdown: Dict[str, int]
     usable_for_routing_count: int
     incidents: List[CommunityIncident]
+
+    @property
+    def records(self) -> List[CommunityIncident]:
+        return self.incidents
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -119,7 +128,12 @@ class DatabaseCommunityAdapter(BaseCommunityAdapter):
                     status=r.status,
                     created_at=r.created_at.isoformat() if r.created_at else datetime.now(timezone.utc).isoformat(),
                     corroborations=r.corroborations or 0,
-                    is_fixture=is_fixture
+                    is_fixture=is_fixture,
+                    latitude=r.latitude,
+                    longitude=r.longitude,
+                    encounter_time=r.encounter_time,
+                    dog_count=r.dog_count,
+                    is_aggressive=r.is_aggressive
                 )
             )
 

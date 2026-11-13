@@ -81,11 +81,27 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-# Mount workspace root as static files for single-origin local hosting
+
 import os
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+# Direct Report Download Endpoint
+@app.get("/api/v1/download/report-pdf", tags=["System & Documentation"])
+@app.get("/api/v1/report/pdf", tags=["System & Documentation"])
+def download_final_report_pdf():
+    """Provides a direct attachment download of the SafePath Finder Final Handover & Evaluation Report PDF."""
+    pdf_path = os.path.join(workspace_root, "SAFEPATH_FINDER_FINAL_EVALUATION_REPORT.pdf")
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="Report PDF not found.")
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        filename="SafePath_Finder_Final_Evaluation_Report.pdf"
+    )
+
+# Mount workspace root as static files for single-origin local hosting
 if os.path.exists(os.path.join(workspace_root, "safepath_pro.html")):
     app.mount("/", StaticFiles(directory=workspace_root, html=True), name="frontend")
-

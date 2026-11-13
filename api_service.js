@@ -406,52 +406,88 @@
   // Seed data sources for Admin Data Quality Monitoring
   const SEED_DATA_SOURCES = [
     {
-      id: 'src-bbmp-lights',
-      name: 'Bruhat Bengaluru Mahanagara Palike (BBMP) Streetlight Registry',
-      type: 'Municipal GIS GeoJSON',
-      coverage: 'South Bengaluru (Ward 151 - 160)',
-      lastIngested: '2026-10-22T04:00:00Z',
-      refreshFrequency: 'Weekly scheduled sync',
-      status: 'active',
-      recordsCount: 4280,
-      staleWarning: false,
-      notes: 'Authoritative municipal asset IDs and lamp wattage ratings. Does not report real-time power outages.'
-    },
-    {
       id: 'src-osm-pedestrian',
       name: 'OpenStreetMap Pedestrian Way Network',
-      type: 'Open Data Extract',
-      coverage: 'Greater Bengaluru Urban',
-      lastIngested: '2026-10-26T00:00:00Z',
-      refreshFrequency: 'Daily automated extract',
+      sourceOrganisation: 'OpenStreetMap Contributors',
+      type: 'Open Geospatial Extract (ODbL 1.0)',
+      licence: 'Open Database License (ODbL) 1.0',
+      coverage: 'Greater Bengaluru Pilot Corridor (Jayanagar, Basavanagudi, Lalbagh)',
+      lastIngested: '2026-11-12T00:00:00Z',
+      refreshFrequency: 'Daily automated extract / cached GraphML',
       status: 'active',
-      recordsCount: 31200,
+      recordsCount: 41284,
       staleWarning: false,
-      notes: 'Pedestrian tags (sidewalk=both/left/right, surface, lit=yes/no). Attribute completeness is variable.'
+      notes: 'Pedestrian walkability tags (sidewalk, surface, lit). Missing tags indicate unmapped survey gaps, not proven absence.'
     },
     {
-      id: 'src-community-obs',
+      id: 'src-osm-lighting',
+      name: 'OpenStreetMap Way Lighting & Luminaire Assets',
+      sourceOrganisation: 'OpenStreetMap Contributors',
+      type: 'Open Geospatial Extract (ODbL 1.0)',
+      licence: 'Open Database License (ODbL) 1.0',
+      coverage: 'Bengaluru Pilot Corridor',
+      lastIngested: '2026-11-12T00:00:00Z',
+      refreshFrequency: 'Weekly extract',
+      status: 'active',
+      recordsCount: 1672,
+      staleWarning: false,
+      notes: 'Way-level tags (lit=yes/no) and individual point lamps (highway=street_lamp). Mapped presence indicates asset existence, not field-verified operational status.'
+    },
+    {
+      id: 'src-osm-facilities',
+      name: 'OpenStreetMap Civic Safety & Emergency Assistance POIs',
+      sourceOrganisation: 'OpenStreetMap Contributors',
+      type: 'Open Geospatial Extract (ODbL 1.0)',
+      licence: 'Open Database License (ODbL) 1.0',
+      coverage: 'Bengaluru Urban Corridor',
+      lastIngested: '2026-11-12T00:00:00Z',
+      refreshFrequency: 'Monthly extract',
+      status: 'active',
+      recordsCount: 35,
+      staleWarning: false,
+      notes: 'Police stations, hospitals, clinics, pharmacies. Staffing levels and real-time emergency readiness remain unverified in cartographic data.'
+    },
+    {
+      id: 'src-ncrb-crime',
+      name: 'National Crime Records Bureau (NCRB) Crime in India 2022',
+      sourceOrganisation: 'National Crime Records Bureau, Ministry of Home Affairs, Government of India',
+      type: 'Official Government Open Data (GODL-India)',
+      licence: 'Government Open Data License - India (GODL-India)',
+      coverage: 'Bengaluru Metropolitan Police Commissionerate Area',
+      lastIngested: '2026-11-12T00:00:00Z',
+      refreshFrequency: 'Annual official publication',
+      status: 'active',
+      recordsCount: 24198,
+      staleWarning: false,
+      notes: 'City-wide aggregate statistics for contextual evaluation. Strict rule: aggregate figures are NEVER distributed across individual street segments. Zero incidents != safe.'
+    },
+    {
+      id: 'src-safepath-community',
       name: 'SafePath Community Environmental Observations',
-      type: 'User Submitted & Moderated',
-      coverage: 'Local pilot corridors',
-      lastIngested: '2026-10-27T11:30:00Z',
-      refreshFrequency: 'Continuous queue',
+      sourceOrganisation: 'SafePath Community Contributors & Moderation Panel',
+      type: 'Moderated Community GIS Observations',
+      licence: 'Open Database License (ODbL) / CC BY-SA 4.0',
+      coverage: 'Bengaluru Active Corridors',
+      lastIngested: '2026-11-12T12:00:00Z',
+      refreshFrequency: 'Continuous moderated queue',
       status: 'active',
-      recordsCount: 142,
+      recordsCount: 312,
       staleWarning: false,
-      notes: 'Reviewed against 4-state moderation pipeline (pending, approved, rejected, flagged).'
+      notes: 'Field observations (poor lighting, dog encounters, footpath obstructions). Subject to 4-state moderation pipeline. Zero reports != safe.'
     },
     {
-      id: 'src-city-police-booths',
-      name: 'Bengaluru City Police Kiosk & Help Post Directory',
-      type: 'Public Safety Registry',
-      coverage: 'Bengaluru South Division',
-      lastIngested: '2026-08-15T09:00:00Z',
-      refreshFrequency: 'Quarterly manual update',
-      status: 'stale',
-      recordsCount: 34,
-      staleWarning: true,
-      notes: 'WARNING: Ingestion is >70 days old. Operational staffing hours must be re-verified before reliance.'
+      id: 'src-bbmp-lighting',
+      name: 'Bruhat Bengaluru Mahanagara Palike (BBMP) Luminaire Registry',
+      sourceOrganisation: 'Bruhat Bengaluru Mahanagara Palike (BBMP)',
+      type: 'Municipal Asset Inventory (Proprietary / Unavailable)',
+      licence: 'Proprietary / Open Downloadable Dataset Not Available',
+      coverage: 'BBMP Municipal Wards',
+      lastIngested: null,
+      refreshFrequency: 'N/A',
+      status: 'unavailable',
+      recordsCount: 0,
+      staleWarning: false,
+      notes: 'UNAVAILABLE: BBMP does not publish an open, downloadable machine-readable streetlight dataset under a free license. SafePath preserves an honest unmapped state rather than fabricating luminaires.'
     }
   ];
 
@@ -827,7 +863,7 @@
     // ----------------------------------------------------
     // ROUTE COMPARISON & JOURNEYS (POST /routes/compare)
     // ----------------------------------------------------
-    async compareRoutes({ origin, destination, originCoordinates = null, destinationCoordinates = null, walkingMode = 'pedestrian', preferences = {} }) {
+    async compareRoutes({ origin, destination, originCoordinates = null, destinationCoordinates = null, walkingMode = 'pedestrian', preferences = {}, departurePeriod = 'daytime', stepFree = false }) {
       if (!origin || !destination) {
         throw new Error('Both starting point and destination are required.');
       }
@@ -838,6 +874,8 @@
             origin,
             destination,
             walkingMode,
+            departurePeriod: departurePeriod || preferences.departurePeriod || 'daytime',
+            stepFree: typeof stepFree === 'boolean' ? stepFree : (preferences.stepFree || false),
             preferences: {
               ...preferences,
               includeAlternatives: true,
@@ -888,6 +926,20 @@
     },
 
     // ----------------------------------------------------
+    // SENSITIVITY ANALYSIS (GET /routes/sensitivity-analysis)
+    // ----------------------------------------------------
+    async getSensitivityAnalysis() {
+      if (this.config.mode === 'live') {
+        const res = await fetch(`${this.config.baseUrl}/routes/sensitivity-analysis`, {
+          headers: this.config.token ? { 'Authorization': `Bearer ${this.config.token}` } : {}
+        });
+        if (!res.ok) throw new Error(`Sensitivity analysis request failed (${res.status})`);
+        return await res.json();
+      }
+      throw new Error('Live backend required for sensitivity analysis.');
+    },
+
+    // ----------------------------------------------------
     // EVIDENCE SEGMENTS (GET /evidence/segments?routeId=...)
     // ----------------------------------------------------
     async getRouteSegments(routeId, memorySegments = null) {
@@ -915,6 +967,25 @@
         routeName: routeId,
         segments: []
       };
+    },
+
+    // ----------------------------------------------------
+    // MAP LAYERS & GIS BUNDLE (GET /evidence/map-layers)
+    // ----------------------------------------------------
+    async getMapLayers() {
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/evidence/map-layers`, {
+            headers: this.config.token ? { 'Authorization': `Bearer ${this.config.token}` } : {}
+          });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch (e) {
+          console.warn('Map layers fetch failed, using local layer state:', e);
+        }
+      }
+      return null;
     },
 
     // ----------------------------------------------------
@@ -1094,7 +1165,7 @@
       return all.filter(r => r.reporterId === user.id || r.isLocalSubmission);
     },
 
-    async submitReport({ category, location, description, anonymous = true }) {
+    async submitReport({ category, location, description, anonymous = true, latitude = null, longitude = null, encounterTime = null, dogCount = null, isAggressive = null, observedAt = null }) {
       if (!category || !location || !description) {
         throw new Error('Please select an observation category and provide both location and description.');
       }
@@ -1104,18 +1175,34 @@
 
       if (this.config.mode === 'live') {
         try {
+          const payload = {
+            category,
+            location: location.trim(),
+            description: description.trim(),
+            anonymous: Boolean(anonymous)
+          };
+          if (latitude !== null && latitude !== undefined && !isNaN(latitude)) payload.latitude = Number(latitude);
+          if (longitude !== null && longitude !== undefined && !isNaN(longitude)) payload.longitude = Number(longitude);
+          const timestampVal = encounterTime || observedAt;
+          if (timestampVal) payload.encounterTime = timestampVal;
+          if (dogCount !== null && dogCount !== undefined && !isNaN(dogCount)) payload.dogCount = Number(dogCount);
+          if (isAggressive !== null && isAggressive !== undefined) payload.isAggressive = Boolean(isAggressive);
+
           const res = await fetch(`${this.config.baseUrl}/reports`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               ...(this.config.token ? { 'Authorization': `Bearer ${this.config.token}` } : {})
             },
-            body: JSON.stringify({ category, location, description, anonymous })
+            body: JSON.stringify(payload)
           });
-          if (!res.ok) throw new Error(`Report submission failed (${res.status})`);
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || `Report submission failed (${res.status})`);
+          }
           return await res.json();
         } catch (err) {
-          throw new Error(`Live reporting unavailable: ${err.message}`);
+          throw new Error(`Reporting failed: ${err.message}`);
         }
       }
 
@@ -1127,6 +1214,10 @@
         poor_visibility: 'Poor visibility / blind curve',
         construction_hazard: 'Construction or pavement hazard',
         access_facility: 'Access or public transit facility',
+        dog_sighting: 'Dog sighting (calm / informational)',
+        dog_group: 'Group or pack of dogs',
+        dog_aggressive: 'Aggressive dog encounter',
+        dog_bite: 'Dog bite / physical attack',
         other_concern: 'Other street condition'
       };
 
@@ -1136,13 +1227,18 @@
         categoryLabel: categoryLabels[category] || 'Other street condition',
         location: location.trim(),
         description: description.trim(),
+        latitude: latitude || 12.9350,
+        longitude: longitude || 77.5830,
+        encounterTime: encounterTime || new Date().toISOString(),
+        dogCount: dogCount || (category === 'dog_group' ? 3 : (category.startsWith('dog_') ? 1 : null)),
+        isAggressive: isAggressive !== null ? isAggressive : (category === 'dog_aggressive' || category === 'dog_bite'),
         createdAt: new Date().toISOString(),
-        status: 'pending', // Contract: pending, approved, rejected, flagged
+        status: category === 'dog_bite' ? 'flagged' : 'pending', // bites auto-flagged
         provenance: anonymous ? 'Anonymous demo web reporter' : `Reported by ${user ? user.name : 'Traveller'}`,
         corroborations: 1,
         reporterId: user ? user.id : 'usr-demo-travel',
         isLocalSubmission: true,
-        moderatorNotes: ''
+        moderatorNotes: category === 'dog_bite' ? 'Auto-flagged for high potential risk.' : ''
       };
 
       const all = storage.get(STORAGE_KEYS.COMMUNITY_REPORTS, SEED_REPORTS);
@@ -1151,6 +1247,149 @@
 
       this.logAudit('Submitted community observation', `${newReport.id}: ${newReport.category}`, user ? user.name : 'Anonymous');
       return newReport;
+    },
+
+    async updateReport(reportId, updateData) {
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/reports/${encodeURIComponent(reportId)}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              ...this._authHeaders()
+            },
+            body: JSON.stringify(updateData)
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Update failed (${res.status})`);
+          }
+          return await res.json();
+        } catch (err) {
+          throw new Error(`Report correction failed: ${err.message}`);
+        }
+      }
+
+      // Demo Mode
+      const all = storage.get(STORAGE_KEYS.COMMUNITY_REPORTS, SEED_REPORTS);
+      const idx = all.findIndex(r => r.id === reportId);
+      if (idx === -1) throw new Error(`Report ${reportId} not found.`);
+
+      Object.assign(all[idx], updateData);
+      all[idx].updatedAt = new Date().toISOString();
+      storage.set(STORAGE_KEYS.COMMUNITY_REPORTS, all);
+      this.logAudit('Corrected community observation', `${reportId}`, 'Reporter');
+      return all[idx];
+    },
+
+    async withdrawReport(reportId) {
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/reports/${encodeURIComponent(reportId)}`, {
+            method: 'DELETE',
+            headers: this._authHeaders()
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Withdrawal failed (${res.status})`);
+          }
+          return await res.json();
+        } catch (err) {
+          throw new Error(`Report withdrawal failed: ${err.message}`);
+        }
+      }
+
+      // Demo Mode
+      const all = storage.get(STORAGE_KEYS.COMMUNITY_REPORTS, SEED_REPORTS);
+      const idx = all.findIndex(r => r.id === reportId);
+      if (idx === -1) throw new Error(`Report ${reportId} not found.`);
+
+      all[idx].status = 'rejected';
+      all[idx].moderatorNotes = 'Withdrawn by submitter.';
+      storage.set(STORAGE_KEYS.COMMUNITY_REPORTS, all);
+      this.logAudit('Withdrew community observation', `${reportId}`, 'Reporter');
+      return { message: 'Report successfully withdrawn.', reportId };
+    },
+
+    async corroborateReport(reportId) {
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/reports/${encodeURIComponent(reportId)}/corroborate`, {
+            method: 'POST',
+            headers: this._authHeaders()
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Corroboration failed (${res.status})`);
+          }
+          return await res.json();
+        } catch (err) {
+          throw new Error(`Report corroboration failed: ${err.message}`);
+        }
+      }
+
+      // Demo Mode
+      const all = storage.get(STORAGE_KEYS.COMMUNITY_REPORTS, SEED_REPORTS);
+      const idx = all.findIndex(r => r.id === reportId);
+      if (idx !== -1) {
+        all[idx].corroborations = (all[idx].corroborations || 1) + 1;
+        storage.set(STORAGE_KEYS.COMMUNITY_REPORTS, all);
+      }
+      return { message: 'Report corroborated in demo mode.', corroborationsCount: (all[idx]?.corroborations || 2) };
+    },
+
+    async confirmReportActive(reportId) {
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/reports/${encodeURIComponent(reportId)}/confirm`, {
+            method: 'POST',
+            headers: this._authHeaders()
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Confirmation failed (${res.status})`);
+          }
+          return await res.json();
+        } catch (err) {
+          throw new Error(`Report confirmation failed: ${err.message}`);
+        }
+      }
+
+      // Demo Mode
+      const all = storage.get(STORAGE_KEYS.COMMUNITY_REPORTS, SEED_REPORTS);
+      const idx = all.findIndex(r => r.id === reportId);
+      if (idx !== -1) {
+        all[idx].corroborations = (all[idx].corroborations || 1) + 1;
+        storage.set(STORAGE_KEYS.COMMUNITY_REPORTS, all);
+      }
+      return { message: 'Observation confirmed still active (demo mode).', corroborationsCount: (all[idx]?.corroborations || 2) };
+    },
+
+    async flagReportOutdated(reportId) {
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/reports/${encodeURIComponent(reportId)}/outdated`, {
+            method: 'POST',
+            headers: this._authHeaders()
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Flag failed (${res.status})`);
+          }
+          return await res.json();
+        } catch (err) {
+          throw new Error(`Flagging report failed: ${err.message}`);
+        }
+      }
+
+      // Demo Mode
+      const all = storage.get(STORAGE_KEYS.COMMUNITY_REPORTS, SEED_REPORTS);
+      const idx = all.findIndex(r => r.id === reportId);
+      if (idx !== -1) {
+        all[idx].outdatedFlags = (all[idx].outdatedFlags || 0) + 1;
+        storage.set(STORAGE_KEYS.COMMUNITY_REPORTS, all);
+      }
+      return { message: 'Observation flagged as resolved or outdated (demo mode).' };
     },
 
     async updateReportModeration(reportId, newStatus, reason = '') {
@@ -1321,6 +1560,188 @@
     },
 
     // ----------------------------------------------------
+    // PHASE 3: JOURNEY SESSIONS & EXPIRING TOKEN SHARING
+    // ----------------------------------------------------
+    async startJourneySession({ origin, destination, routeName, routeId, etaMinutes, distanceMeters, contactIds, consentGiven }) {
+      if (!consentGiven) {
+        throw new Error('Explicit consent is required to share your journey and location.');
+      }
+
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/journey-sessions/start`, {
+            method: 'POST',
+            headers: this._authHeaders(),
+            body: JSON.stringify({
+              origin,
+              destination,
+              routeName,
+              routeId: routeId || null,
+              etaMinutes: Math.round(etaMinutes || 20),
+              distanceMeters: distanceMeters ? Math.round(distanceMeters) : null,
+              contactIds: contactIds || [],
+              consentGiven: true
+            })
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Failed to start journey session (${res.status})`);
+          }
+          const session = await res.json();
+          storage.set('safepath_active_journey_session', session);
+          return session;
+        } catch (err) {
+          throw new Error(`Journey session failed: ${err.message}`);
+        }
+      }
+
+      // Demo Mode
+      const token = 'demo_share_' + Date.now();
+      const session = {
+        id: 'js-' + Date.now(),
+        token,
+        origin,
+        destination,
+        routeName,
+        routeId: routeId || null,
+        etaMinutes: Math.round(etaMinutes || 20),
+        distanceMeters: distanceMeters ? Math.round(distanceMeters) : null,
+        status: 'in_progress',
+        consentGiven: true,
+        contactCount: (contactIds || []).length,
+        startedAt: new Date().toISOString(),
+        expectedArrivalAt: new Date(Date.now() + (etaMinutes || 20) * 60000).toISOString(),
+        expiresAt: new Date(Date.now() + (etaMinutes || 20) * 120000).toISOString(),
+        shareUrl: `${window.location.origin}${window.location.pathname}?share_token=${token}`,
+        notificationMode: 'simulated_dev_mode',
+        disclaimer: 'PEER-TO-PEER REASSURANCE ONLY. SafePath does NOT contact emergency services.'
+      };
+      storage.set('safepath_active_journey_session', session);
+      return session;
+    },
+
+    async checkInJourneySession(sessionId) {
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/journey-sessions/${encodeURIComponent(sessionId)}/check-in`, {
+            method: 'POST',
+            headers: this._authHeaders()
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Check-in failed (${res.status})`);
+          }
+          const data = await res.json();
+          storage.remove('safepath_active_journey_session');
+          return data;
+        } catch (err) {
+          throw new Error(`Check-in failed: ${err.message}`);
+        }
+      }
+
+      const session = storage.get('safepath_active_journey_session', null);
+      if (session && session.id === sessionId) {
+        session.status = 'completed';
+        session.completedAt = new Date().toISOString();
+        storage.remove('safepath_active_journey_session');
+      }
+      return { message: 'Safe arrival confirmed. Contacts notified.', status: 'completed' };
+    },
+
+    async cancelJourneySession(sessionId) {
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/journey-sessions/${encodeURIComponent(sessionId)}/cancel`, {
+            method: 'POST',
+            headers: this._authHeaders()
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Revocation failed (${res.status})`);
+          }
+          const data = await res.json();
+          storage.remove('safepath_active_journey_session');
+          return data;
+        } catch (err) {
+          throw new Error(`Journey cancellation failed: ${err.message}`);
+        }
+      }
+
+      storage.remove('safepath_active_journey_session');
+      return { message: 'Journey session cancelled and live sharing revoked.' };
+    },
+
+    async getActiveJourneySessions() {
+      if (this.isLiveBackend()) {
+        try {
+          const res = await fetch(`${this.config.baseUrl}/journey-sessions/active`, {
+            headers: this._authHeaders()
+          });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch (e) {
+          console.warn('Failed to fetch active journey sessions:', e);
+        }
+        return [];
+      }
+
+      const session = storage.get('safepath_active_journey_session', null);
+      return (session && session.status === 'in_progress') ? [session] : [];
+    },
+
+    async getPublicJourneyShare(token) {
+      if (this.isLiveBackend()) {
+        const res = await fetch(`${this.config.baseUrl}/journey-shares/public/${encodeURIComponent(token)}`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || 'Shared journey not found or token expired.');
+        }
+        return await res.json();
+      }
+
+      const session = storage.get('safepath_active_journey_session', null);
+      if (session && session.token === token) {
+        return {
+          sessionToken: token,
+          origin: session.origin,
+          destination: session.destination,
+          routeName: session.routeName,
+          etaMinutes: session.etaMinutes,
+          status: session.status,
+          startedAt: session.startedAt,
+          expectedArrivalAt: session.expectedArrivalAt,
+          completedAt: session.completedAt,
+          expiresAt: session.expiresAt,
+          isOverdue: false,
+          overdueMinutes: 0,
+          notificationMode: 'simulated_dev_mode',
+          disclaimer: 'PEER-TO-PEER REASSURANCE ONLY. SafePath does NOT contact emergency services.'
+        };
+      }
+      throw new Error('Shared journey not found or link has expired.');
+    },
+
+    async simulateJourneyReminder(sessionId) {
+      if (this.isLiveBackend()) {
+        const res = await fetch(`${this.config.baseUrl}/journey-sessions/${encodeURIComponent(sessionId)}/simulate-reminder`, {
+          method: 'POST',
+          headers: this._authHeaders()
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || 'Failed to trigger reminder simulation.');
+        }
+        return await res.json();
+      }
+      return {
+        simulated: true,
+        notificationMode: 'simulated_dev_mode',
+        message: 'Pre-arrival reminder simulated (5 minutes before expected arrival).'
+      };
+    },
+
+    // ----------------------------------------------------
     // SAVED PLACES
     // ----------------------------------------------------
     getSavedPlaces() {
@@ -1391,6 +1812,25 @@
     // ----------------------------------------------------
     // ADMIN CAPABILITIES (Users, Data Sources, System Settings)
     // ----------------------------------------------------
+    async getEvidenceSources() {
+      if (this.isLiveBackend()) {
+        try {
+          const headers = {};
+          if (this.config.token) {
+            headers['Authorization'] = 'Bearer ' + this.config.token;
+          }
+          const res = await fetch(this.config.baseUrl + '/evidence/sources', { headers });
+          if (res.ok) {
+            const data = await res.json();
+            return Array.isArray(data) ? data : (data.items || []);
+          }
+        } catch (e) {
+          console.warn('Failed to fetch evidence sources from backend, falling back to local registry', e);
+        }
+      }
+      return SEED_DATA_SOURCES;
+    },
+
     async fetchAdminDataSources() {
       if (this.isLiveBackend()) {
         const res = await fetch(`${this.config.baseUrl}/admin/data-sources`, { headers: this._authHeaders() });
@@ -1605,6 +2045,16 @@
         return data;
       }
       return this.getSystemSettings();
+    },
+
+    async getStudyAreaAudit() {
+      try {
+        const res = await fetch(`${this.config.baseUrl}/study-area/audit`);
+        if (res.ok) return await res.json();
+      } catch (e) {
+        console.warn('Study area audit fetch failed:', e);
+      }
+      return null;
     },
 
     getSystemSettings() {

@@ -9,7 +9,9 @@ from app.schemas.route import (
     RouteAlternative,
     EvidenceSummary,
     StreetlightEvidenceSummary,
-    NearbyPlace
+    NearbyPlace,
+    DogEncounterSummary,
+    PedestrianInfrastructureSummary
 )
 from app.geospatial.study_area import StudyArea
 from app.geospatial.exceptions import (
@@ -138,11 +140,16 @@ def compare_routes_service(
     preferences: Dict[str, Any] = None,
     origin_coordinates: Optional[List[float]] = None,
     destination_coordinates: Optional[List[float]] = None,
+    departure_period: Optional[str] = None,
+    step_free: Optional[bool] = None,
     db: Optional[Session] = None
 ) -> RouteCompareResponse:
     """Compare walking routes and provide explainable multi-attribute scoring without black-box scores."""
     study_area = StudyArea.from_settings()
     prefs = preferences or {}
+
+    dep_period = (departure_period or prefs.get("departurePeriod") or prefs.get("departure_period") or prefs.get("timeOfDay") or prefs.get("time_of_day") or "daytime").lower().strip()
+    is_step_free = step_free if step_free is not None else bool(prefs.get("stepFree") or prefs.get("step_free", False))
 
     # 1. Resolve and validate coordinates
     orig_coords = _resolve_location_robust(origin, origin_coordinates, label="starting location")
@@ -188,8 +195,10 @@ def compare_routes_service(
         except Exception as e:
             logger.warning(f"Could not load community reports from db: {e}")
 
-    # 4. Configure Risk Model with research parameters and user overrides
+    # 4. Configure Risk Model with research parameters and user overrides (Phase 2 Model v2.0)
     risk_model = SegmentRiskModel(
+        departure_period=dep_period,
+        step_free=is_step_free,
         walking_speed_mps=prefs.get("walkingSpeedMps"),
         lambda_balanced=prefs.get("lambdaBalanced"),
         lambda_safety=prefs.get("lambdaSafety"),
@@ -197,7 +206,9 @@ def compare_routes_service(
         weight_crime=prefs.get("weightCrime"),
         weight_lighting=prefs.get("weightLighting"),
         weight_community=prefs.get("weightCommunity"),
+        weight_infrastructure=prefs.get("weightInfrastructure"),
         weight_assistance=prefs.get("weightAssistance"),
+        weight_dog=prefs.get("weightDog"),
         min_coverage_threshold=prefs.get("minCoverageThreshold")
     )
 
@@ -205,6 +216,8 @@ def compare_routes_service(
     router_cache_key = (
         study_area.slug,
         id(graph),
+        dep_period,
+        is_step_free,
         risk_model.walking_speed_mps,
         risk_model.lambda_balanced,
         risk_model.lambda_safety,
@@ -212,6 +225,8 @@ def compare_routes_service(
         round(risk_model.w_crime, 4),
         round(risk_model.w_lighting, 4),
         round(risk_model.w_community, 4),
+        round(risk_model.w_infrastructure, 4),
+        round(risk_model.w_dog, 4),
         round(risk_model.w_assistance, 4),
         prefs.get("maxDetourRatio"),
         prefs.get("overlapThreshold"),
@@ -230,7 +245,9 @@ def compare_routes_service(
             community_reports=comm_reports,
             max_detour_ratio=prefs.get("maxDetourRatio"),
             overlap_threshold=prefs.get("overlapThreshold"),
-            max_alternatives=prefs.get("maxAlternatives")
+            max_alternatives=prefs.get("maxAlternatives"),
+            departure_period=dep_period,
+            step_free=is_step_free
         )
         _ROUTER_CACHE[router_cache_key] = router
 
@@ -239,13 +256,13 @@ def compare_routes_service(
     avoid_unknown = prefs.get("avoidUnknown", True)
     if prefer_lighting and avoid_unknown:
         ranking_pref = "safety"
-        ranking_reason = "Evidence-led Route ranks #1 because lighting verification and low tolerance for unmapped segments are prioritized."
+        ranking_reason = f"Evidence-led Route ranks #1 because lighting verification and low tolerance for unmapped segments are prioritized ({dep_period.capitalize()} period)."
     elif not prefer_lighting and not avoid_unknown:
         ranking_pref = "fastest"
         ranking_reason = "Shortest Sample Route ranks #1 because travel time is prioritized over evidence availability."
     else:
         ranking_pref = "balanced"
-        ranking_reason = "Balanced Sample Route ranks well as a compromise between travel distance and evidence coverage."
+        ranking_reason = f"Balanced Sample Route ranks well as a compromise between travel distance and evidence coverage ({dep_period.capitalize()} period)."
 
     # 7. Compute all routes
     include_alts = bool(
@@ -259,7 +276,9 @@ def compare_routes_service(
         dest_lat=dest_coords[0],
         dest_lon=dest_coords[1],
         ranking_preference=ranking_pref,
-        include_alternatives=include_alts
+        include_alternatives=include_alts,
+        departure_period=dep_period,
+        step_free=is_step_free
     )
 
     # 8. Assemble response
@@ -282,6 +301,14 @@ def compare_routes_service(
         nearby_places = []
         if r.nearby_places:
             nearby_places = [NearbyPlace(**p) for p in r.nearby_places]
+
+        dog_summary = None
+        if getattr(r, "dog_encounter_summary", None):
+            dog_summary = DogEncounterSummary(**r.dog_encounter_summary)
+
+        infra_summary = None
+        if getattr(r, "pedestrian_infrastructure_summary", None):
+            infra_summary = PedestrianInfrastructureSummary(**r.pedestrian_infrastructure_summary)
 
         routes_output.append(
             RouteAlternative(
@@ -319,7 +346,16 @@ def compare_routes_service(
                 isIdenticalToFastest=r.is_identical_to_fastest,
                 identicalNotes=r.identical_notes,
                 streetlightSummary=st_summary,
-                nearbyPlaces=nearby_places
+                nearbyPlaces=nearby_places,
+                dogEncounterSummary=dog_summary,
+                pedestrianInfrastructureSummary=infra_summary,
+                departurePeriod=r.departure_period,
+                stepFree=r.step_free,
+                adverseRiskScore=r.adverse_risk_score,
+                overlapWithFastest=r.overlap_with_fastest,
+                explanationDetails=r.explanation_details,
+                walkingSpeedMps=getattr(r, "walking_speed_mps", 1.2),
+                walkingSpeedKmh=getattr(r, "walking_speed_kmh", 4.3)
             )
         )
 

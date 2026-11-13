@@ -233,17 +233,28 @@ Searches for real places, street addresses, landmarks, or coordinates via forwar
   ```
 
 #### `POST /routes/compare`
-Compares walking-route alternatives using transparent multi-attribute utility ranking and explainable trade-offs. Computes primary routes via separate Dijkstra runs on a directed weighted pedestrian network, plus distinct loopless alternatives via Yen's K-shortest paths algorithm. Validates origin and destination coordinates against the active study area boundary.
+Compares walking-route alternatives using transparent multi-attribute utility ranking and explainable trade-offs. Computes primary routes via separate Dijkstra runs on a directed weighted pedestrian network, plus distinct loopless alternatives via Yen's K-shortest paths algorithm with length-weighted spatial overlap filtering ($\le 0.75$). Validates origin and destination coordinates against the active study area boundary.
 
+- **Routing Model Version**: `2.0.0`
 - **Generalized Edge Cost**:
-  $$\text{Cost}_e = T_e \times (1 + \lambda \times R_{\text{effective}_e})$$
-  - **Fastest**: $\lambda = 0$ (minimizes pedestrian traversal time $\sum T_e$).
-  - **Balanced**: $\lambda = \lambda_{\text{balanced}} > 0$ (default `1.0`).
-  - **Safety-prioritized**: $\lambda = \lambda_{\text{safety}} > \lambda_{\text{balanced}}$ (default `3.0`).
-- **Effective Risk Formula**:
-  $$R_{\text{effective}} = Q \times R_{\text{observed}} + (1 - Q) \times R_{\text{unknown}}$$
-  where $Q$ is composite evidence coverage across verified lighting, assistance access, crime records, and community feedback. Missing evidence is never encoded as zero risk.
-- **Alternatives**: Yen's K-shortest loopless paths with Jaccard edge overlap filtering ($< 0.80$).
+  $$\text{Cost}(e) = T(e) \times (1 + \lambda \times R_{\text{effective}}(e))$$
+  - **Fastest Route**: $\text{Cost}_{\text{fastest}}(e) = T(e)$ (strictly walking time $\sum T(e)$ based on physical length and $1.2\text{ m/s}$ walking speed, invariant to departure time).
+  - **Balanced Route**: $\text{Cost}_{\text{balanced}}(e) = T(e) \times (1 + \lambda_{\text{balanced}} \times R_{\text{effective}}(e))$, default $\lambda_{\text{balanced}} = 1.0$.
+  - **Safety-prioritized Route**: $\text{Cost}_{\text{safety}}(e) = T(e) \times (1 + \lambda_{\text{safety}} \times R_{\text{effective}}(e))$, default $\lambda_{\text{safety}} = 3.0$.
+  - Invariant: $\lambda_{\text{safety}} > \lambda_{\text{balanced}} \ge 0$.
+- **Adverse Risk Model ($R_{\text{observed}}$)**:
+  $$R_{\text{observed}}(e) = w_c C(e) + w_l L(e) + w_d D(e) + w_f F(e) + w_p P(e) + w_a A(e)$$
+  - Normalised Model Weights (v2.0.0): $w_c = 0.25, w_l = 0.25, w_d = 0.15, w_f = 0.15, w_p = 0.15, w_a = 0.05$. Sum $= 1.00$.
+  - $C(e)$: Historical crime-related evidence.
+  - $L(e)$: Poor-lighting indicator (diurnally modulated: 0.10 daytime, 0.60 evening, 1.00 night).
+  - $D(e)$: Dog-encounter risk indicator (ordinary calm sightings informational, aggressive barking/bites penalized).
+  - $F(e)$: Negative community feedback indicator.
+  - $P(e)$: Pedestrian infrastructure deficiency indicator (missing sidewalks, high crossing difficulty, active obstructions).
+  - $A(e)$: Assistance facility isolation penalty (non-negative distance penalty; assistance access is never treated as proof of low crime).
+- **Evidence Coverage & Effective Risk**:
+  $$Q(e) = \frac{\sum w_i q_i(e)}{\sum w_i}, \quad R_{\text{effective}}(e) = Q(e) R_{\text{observed}}(e) + (1 - Q(e)) R_{\text{unknown}}$$
+  Configured prior $R_{\text{unknown}} = 0.50$. Missing evidence is never encoded as zero risk.
+- **Constraints**: Confirmed pedestrian restrictions (`foot=no`, `access=private`, `motorway`) are assigned cost $\infty$. When `stepFree=true`, pedestrian steps and stairs are assigned cost $\infty$.
 
 - **Access**: Public
 - **Request Body**:
@@ -252,6 +263,8 @@ Compares walking-route alternatives using transparent multi-attribute utility ra
     "origin": "12.9257, 77.5833",
     "destination": "12.9501, 77.5847",
     "walkingMode": "pedestrian",
+    "departurePeriod": "night",
+    "stepFree": false,
     "originCoordinates": [12.9257, 77.5833],
     "destinationCoordinates": [12.9501, 77.5847],
     "preferences": {
@@ -262,10 +275,11 @@ Compares walking-route alternatives using transparent multi-attribute utility ra
     }
   }
   ```
+  - `departurePeriod` *(optional, string)*: Intended departure period (`"daytime"`, `"evening"`, `"night"`). Default `"daytime"`.
+  - `stepFree` *(optional, boolean)*: Require step-free pedestrian path excluding steps/stairs. Default `false`.
+
 - **Responses**:
   - `200 OK`: Successful comparison.
-  - `400 Bad Request`: Coordinate falls outside configured study area, or origin and destination lie in disconnected network components.
-  - `422 Unprocessable Entity`: Coordinate values outside valid mathematical latitude/longitude range.
   ```json
   {
     "origin": "12.9257, 77.5833",
@@ -279,12 +293,16 @@ Compares walking-route alternatives using transparent multi-attribute utility ra
         "name": "Safety-prioritized Route",
         "preference": "Safety-prioritized",
         "category": "safety_prioritized",
+        "departurePeriod": "night",
+        "stepFree": false,
         "distanceMeters": 2721,
         "durationSeconds": 2268,
         "generalizedCost": 4857.74,
         "routeRisk": 0.3807,
+        "adverseRiskScore": 0.2840,
         "evidenceCoverage": 0.45,
         "hasInsufficientEvidence": false,
+        "overlapWithFastest": 0.82,
         "geometry": [[12.9257, 77.5833], [12.9290, 77.5831], [12.9501, 77.5847]],
         "characteristics": [
           "100.0% verified street lighting",
@@ -305,6 +323,17 @@ Compares walking-route alternatives using transparent multi-attribute utility ra
           "dataQualitySummary": "45.0% evidence coverage across indicators"
         },
         "explanation": "Safety-prioritized route with high risk penalty (lambda=3.0). Strongly avoids unlit, conflicting, and higher-crime segments.",
+        "explanationDetails": {
+          "selection_reason": "Route was selected under Safety-prioritized objective (lambda=3.0).",
+          "influential_segments": "Segment 10th Main Road (effective risk 0.18) guided route away from unlit alternatives.",
+          "crime_evidence": "Traverses segments with zero verified historical crime records.",
+          "lighting_evidence": "100.0% verified lit corridor during night departure period.",
+          "dog_encounters": "No aggressive stray dog encounters reported.",
+          "infrastructure_evidence": "92.0% dedicated sidewalk coverage.",
+          "assistance_proximity": "Police assistance within 367m, hospital within 743m.",
+          "uncertainty_and_prior": "Composite evidence coverage is 45.0%. Missing data filled with prior R_unknown=0.50.",
+          "time_delta_vs_fastest": "Matches fastest direct walking time."
+        },
         "tradeoffs": "Fastest route already follows the safest corridor; no additional walking detour needed.",
         "rankingFactors": [
           "Generalized cost: 4857.74",
@@ -314,9 +343,43 @@ Compares walking-route alternatives using transparent multi-attribute utility ra
         "sourceMetadata": {
           "network": "OpenStreetMap pedestrian graph",
           "licensing": "ODbL 1.0",
-          "algorithm": "Dijkstra / Yen loopless paths"
+          "algorithm": "Dijkstra / Yen loopless paths",
+          "scoringModelVersion": "2.0.0"
         }
       }
+    ]
+  }
+  ```
+
+#### `GET /routes/sensitivity-analysis`
+Executes an empirical sensitivity analysis benchmarking suite evaluating the stability of the SafePath v2.0 routing model across parameter sweeps.
+- **Access**: Public
+- **Evaluations Included**:
+  1. $\lambda$ risk-priority trade-off sweep ($\lambda \in [0.0, 10.0]$).
+  2. Lighting and diurnal temporal modulation sensitivity (`daytime`, `evening`, `night`).
+  3. Stray dog encounter evidence differentiation (ordinary sightings vs aggressive barking vs bite incidents).
+  4. Pedestrian infrastructure deficiencies (sidewalk absence, high crossing difficulty, active obstructions, step-free constraint).
+  5. Missing-data prior sensitivity ($R_{\text{unknown}} \in [0.10, 0.90]$).
+- **Response `200 OK`**:
+  ```json
+  {
+    "status": "success",
+    "timestamp": "2026-11-01T14:15:00Z",
+    "benchmark_graph_nodes": 6,
+    "benchmark_graph_edges": 7,
+    "evaluations": {
+      "lambda_tradeoff": {},
+      "lighting_and_temporal": {},
+      "dog_encounter_differentiation": {},
+      "infrastructure_and_accessibility": {},
+      "missing_data_prior_sensitivity": {}
+    },
+    "key_findings": [
+      "Lambda trade-off demonstrates clear bifurcation between travel-time minimization and risk aversion.",
+      "Time-aware routing shifts preference toward illuminated corridors at night while keeping daytime routes direct.",
+      "Calm dog sightings maintain route continuity whereas aggressive encounters trigger protective detours.",
+      "Step-free constraint strictly avoids stairs while sidewalk availability improves infrastructure quality.",
+      "Prior R_unknown=0.50 strikes a mathematically stable balance between optimism and undue detour penalties."
     ]
   }
   ```
@@ -564,34 +627,89 @@ Manages quick origin/destination bookmarks (Home, Office, Transit).
 ### 3.3 Community Reports & Trusted Journeys
 
 #### `POST /reports`
-Submits a community infrastructure observation. Automatically flags reports containing critical safety keywords for urgent moderator review.
+Submits a community infrastructure observation or dog encounter report. Automatically flags critical safety keywords and dog bites (`dog_bite`) for urgent moderator review.
 - **Access**: Public / Authenticated (user ID captured if authenticated)
+- **Supported Categories**:
+  - `broken_lighting`: Broken / unlit street lighting
+  - `blocked_footpath`: Blocked footpath / sidewalk obstruction
+  - `poor_visibility`: Poor visibility / blind curve / overgrown foliage
+  - `construction_hazard`: Construction or pavement hazard
+  - `access_facility`: Access / public transit facility
+  - `dog_sighting`: Ordinary stray dog sighting (calm / informational)
+  - `dog_group`: Group or pack of stray dogs
+  - `dog_aggressive`: Aggressive encounter (barking, chasing, threatening behaviour)
+  - `dog_bite`: Physical bite incident or animal attack (auto-flagged)
+  - `other_concern`: Other street condition
 - **Request Body**:
   ```json
   {
-    "category": "broken_lighting",
+    "category": "dog_aggressive",
     "location": "Lalbagh West Gate approach",
-    "description": "Streetlight fixture 14-B flickering and unlit between nursery and main gate."
+    "description": "Two dogs barked and chased cyclist near the park gate.",
+    "latitude": 12.9460,
+    "longitude": 77.5844,
+    "encounterTime": "2026-10-27T14:15:00Z",
+    "dogCount": 2,
+    "isAggressive": true,
+    "anonymous": true
   }
   ```
 - **Response `201 Created`**:
   ```json
   {
     "id": "rep-uuid",
-    "category": "broken_lighting",
-    "categoryLabel": "Broken / unlit street lighting",
+    "category": "dog_aggressive",
+    "categoryLabel": "Aggressive dog encounter",
     "location": "Lalbagh West Gate approach",
-    "description": "Streetlight fixture 14-B flickering...",
+    "description": "Two dogs barked and chased...",
     "status": "pending",
-    "createdAt": "2026-10-27T14:15:00Z"
+    "latitude": 12.9460,
+    "longitude": 77.5844,
+    "dogCount": 2,
+    "isAggressive": true,
+    "encounterTime": "2026-10-27T14:15:00Z",
+    "createdAt": "2026-10-27T14:16:00Z"
   }
   ```
 
-#### `GET /reports`
-Lists public, approved reports for map overlay and incident exploration.
+#### `POST /reports/{id}/corroborate`
+Allows a distinct authenticated user to corroborate or confirm a reported street hazard, lighting failure, or animal encounter.
+- **Access**: Authenticated (`Bearer`)
+- **Anti-Abuse Controls**:
+  - Submitter cannot corroborate their own report (`400 Bad Request`).
+  - An account can corroborate a given report only once (`400 Bad Request`). Enforced via unique database constraint `(report_id, user_id)`.
+- **Response `200 OK`**:
+  ```json
+  {
+    "message": "Community report corroborated successfully.",
+    "reportId": "rep-uuid",
+    "corroborationsCount": 2,
+    "userHasCorroborated": true
+  }
+  ```
+
+#### `GET /reports/public`
+Dedicated public map evidence feed returning strictly approved reports with **all reporter PII excluded**.
 - **Access**: Public
-- **Query Parameters**: `category`, `status` (defaults to approved)
-- **Response `200 OK`**: List of approved reports.
+- **Query Parameters**: `category` (optional)
+- **Response `200 OK`**: Array of sanitized incident points containing coordinates, categories, encounter time, count, aggressiveness, status, and description. User IDs, emails, phone numbers, and full names are strictly excluded.
+
+#### `PUT /reports/{id}`
+Allows an authenticated reporter to correct or update their own submitted report.
+- **Access**: Authenticated (`Bearer`) — strict ownership check (`reporter_id == current_user.id`). Foreign modification attempts return `403 Forbidden` (anti-IDOR).
+- **Request Body**: `ReportUpdate` (`description`, `category`, `location`, `latitude`, `longitude`, `locationConfidence`, `dogCount`, `isAggressive`, `encounterTime`).
+- **Response `200 OK`**: Updated sanitized report representation.
+
+#### `DELETE /reports/{id}`
+Allows an authenticated reporter to withdraw their own report. Soft-withdraws report by setting `status = "rejected"` with `moderator_notes = "Withdrawn by submitter"` so it is immediately removed from public routing evidence and map layers.
+- **Access**: Authenticated (`Bearer`) — strict ownership check. Foreign withdrawal attempts return `403 Forbidden`.
+- **Response `200 OK`**: `{"message": "Report successfully withdrawn.", "id": "rep-uuid", "status": "rejected"}`.
+
+#### `GET /reports`
+Lists public community reports with pagination and filtering across categories and moderation statuses.
+- **Access**: Public
+- **Query Parameters**: `category`, `status` (defaults to excluding rejected), `query`, `page`, `pageSize`
+- **Response `200 OK`**: Envelope containing items list and total count. Zero reporter PII exposed for anonymous submissions.
 
 #### `GET /reports/mine`
 Lists reports submitted by the current authenticated traveller across all moderation states.
@@ -784,12 +902,299 @@ Reads and updates global governance thresholds (stale days, auto-flag keywords, 
 
 ---
 
-## 4. Operational Health & Error Codes
+## 5. Phase 3: Explainable Map Experience, Community Trust & Journey Protection
+
+### 5.1 Evidence Map Layers Bundle
+
+#### `GET /evidence/map-layers`
+Returns aggregated geospatial evidence layers partitioned by classification for client-side multi-layer rendering and independent layer toggling without triggering Dijkstra route recomputation.
+- **Access**: Public
+- **Query Parameters**:
+  - `studyArea` (optional, default `"default"`): Target study area boundary.
+- **Response `200 OK`**:
+  ```json
+  {
+    "studyArea": "default",
+    "timestamp": "2026-11-01T14:00:00Z",
+    "safetyDisclaimer": "SafePath Finder provides descriptive, historical, and community-reported evidence for informational purposes only. It is NOT an emergency dispatch service and does not guarantee personal safety.",
+    "layers": {
+      "facilities": [
+        {
+          "id": "fac-001",
+          "name": "Central Police Station",
+          "category": "police",
+          "coordinates": [12.9716, 77.5946],
+          "type": "official_presence",
+          "dataSource": "Bengaluru Police GIS Registry"
+        }
+      ],
+      "landmarks": [
+        {
+          "id": "lmk-001",
+          "name": "MG Road Metro Station",
+          "category": "transit_hub",
+          "coordinates": [12.9756, 77.6066],
+          "type": "natural_surveillance"
+        }
+      ],
+      "dogs": [
+        {
+          "id": "dog-001",
+          "category": "pack",
+          "severity": "caution",
+          "coordinates": [12.973, 77.598],
+          "encounterTime": "2026-10-31T20:30:00Z",
+          "packSize": 4,
+          "verified": true,
+          "corroborations": 3,
+          "outdatedFlags": 0
+        }
+      ],
+      "communityReports": [
+        {
+          "id": "rep-001",
+          "category": "street_lighting",
+          "coordinates": [12.974, 77.601],
+          "observedAt": "2026-10-31T21:15:00Z",
+          "status": "published",
+          "corroborationsCount": 5,
+          "outdatedFlags": 1
+        }
+      ],
+      "lighting": [
+        {
+          "segmentId": "seg-101",
+          "geometry": [[12.971, 77.594], [12.973, 77.596]],
+          "litStatus": "well_lit",
+          "lumensEstimated": 32.5,
+          "source": "Municipal Streetlight Audit 2026"
+        }
+      ],
+      "pedestrianInfra": [
+        {
+          "segmentId": "seg-101",
+          "sidewalkPresent": true,
+          "surfaceQuality": "good",
+          "crossingType": "signalized"
+        }
+      ],
+      "crimeObservations": [
+        {
+          "id": "cr-001",
+          "incidentType": "theft",
+          "coordinates": [12.972, 77.595],
+          "timePeriod": "night",
+          "source": "State Crime Records Bureau (Anonymized)"
+        }
+      ]
+    },
+    "legendSections": {
+      "mappedData": [
+        {"layer": "facilities", "description": "Verified police posts and hospitals", "reliability": "official_registry"},
+        {"layer": "lighting", "description": "Municipal lighting survey and photometric measurements", "reliability": "government_audit"}
+      ],
+      "communityReports": [
+        {"layer": "communityReports", "description": "Traveller-submitted observations pending or confirmed", "reliability": "crowdsourced_subject_to_decay"},
+        {"layer": "dogs", "description": "Canine sightings, packs, and encounters", "reliability": "crowdsourced_corroborated"}
+      ],
+      "inferredValues": [
+        {"layer": "visibilityScores", "description": "Calculated pedestrian field-of-view and natural surveillance scores", "reliability": "algorithmic_inference"}
+      ],
+      "unknownInfo": [
+        {"layer": "unmappedStreets", "description": "Streets lacking photometric audits or recent community observations", "reliability": "epistemic_uncertainty_r_unknown"}
+      ]
+    }
+  }
+  ```
+
+---
+
+### 5.2 Community Report Reliability & Confirmations
+
+#### `POST /reports/{report_id}/confirm`
+Confirms that a reported community observation remains active and accurate.
+- **Access**: Authenticated Traveller
+- **Idempotency & Anti-Gaming**:
+  - Submitter cannot confirm their own report (`400 Bad Request`).
+  - If user previously flagged the report as outdated, the outdated flag is automatically retracted and moved to active confirmation.
+  - Repeated confirmation returns the existing confirmation (`200 OK`).
+- **Response `200 OK`**:
+  ```json
+  {
+    "message": "Report confirmed as still active.",
+    "reportId": "rep-001",
+    "corroborationsCount": 6,
+    "outdatedFlags": 0,
+    "userAction": "confirm"
+  }
+  ```
+
+#### `POST /reports/{report_id}/outdated`
+Flags a community report as outdated, resolved, or no longer reflecting current street conditions.
+- **Access**: Authenticated Traveller
+- **Idempotency & Anti-Gaming**:
+  - Submitter cannot flag their own report (`400 Bad Request`).
+  - If user previously confirmed the report, the confirmation is retracted and moved to outdated flag.
+- **Response `200 OK`**:
+  ```json
+  {
+    "message": "Report flagged as outdated or resolved.",
+    "reportId": "rep-001",
+    "corroborationsCount": 5,
+    "outdatedFlags": 1,
+    "userAction": "outdated"
+  }
+  ```
+
+#### `GET /reports/mine`
+Retrieves all reports submitted by the authenticated traveller with moderation lifecycle tracking.
+- **Access**: Authenticated Traveller
+- **Response `200 OK`**:
+  ```json
+  {
+    "items": [
+      {
+        "id": "rep-001",
+        "category": "street_lighting",
+        "subCategory": "dark_stretch",
+        "title": "Streetlight fixture unpowered",
+        "status": "published",
+        "observedAt": "2026-10-31T20:00:00Z",
+        "createdAt": "2026-10-31T20:15:00Z",
+        "coordinates": [12.974, 77.601],
+        "corroborationsCount": 4,
+        "outdatedFlags": 0
+      }
+    ],
+    "total": 1
+  }
+  ```
+
+---
+
+### 5.3 Trusted-Contact Journey Protection Sessions
+
+#### `POST /journey-sessions/start`
+Starts a walk journey session with explicit voluntary user consent, ETA, and trusted contact notifications.
+- **Access**: Authenticated Traveller
+- **Request Body**:
+  ```json
+  {
+    "origin": [12.9716, 77.5946],
+    "destination": [12.9756, 77.6066],
+    "routeName": "Safety-prioritized Route",
+    "routeId": "route-safe-01",
+    "etaMinutes": 18,
+    "distanceMeters": 1420.0,
+    "contactIds": ["ct-001", "ct-002"],
+    "consentGiven": true
+  }
+  ```
+- **Responses**:
+  - `201 Created`:
+    ```json
+    {
+      "id": "js-uuid",
+      "token": "sec-token-hex-32",
+      "status": "in_progress",
+      "origin": [12.9716, 77.5946],
+      "destination": [12.9756, 77.6066],
+      "routeName": "Safety-prioritized Route",
+      "etaMinutes": 18,
+      "distanceMeters": 1420.0,
+      "contactCount": 2,
+      "startedAt": "2026-11-01T14:30:00Z",
+      "expectedArrivalAt": "2026-11-01T14:48:00Z",
+      "expiresAt": "2026-11-01T18:30:00Z",
+      "notificationMode": "simulated_development_mode",
+      "shareUrl": "/safepath_pro.html?share_token=sec-token-hex-32"
+    }
+    ```
+  - `400 Bad Request`: Voluntary consent not given (`consentGiven: false`).
+
+#### `POST /journey-sessions/{session_id}/check-in`
+Safely concludes an active journey session ("I Have Arrived Safely").
+- **Access**: Authenticated Traveller (session owner)
+- **Responses**:
+  - `200 OK`:
+    ```json
+    {
+      "id": "js-uuid",
+      "status": "completed",
+      "completedAt": "2026-11-01T14:45:00Z",
+      "message": "Journey completed safely. Trusted contacts notified."
+    }
+    ```
+  - `400 Bad Request`: Session already completed (idempotency guard) or revoked.
+
+#### `POST /journey-sessions/{session_id}/cancel`
+Revokes or cancels an active journey session.
+- **Access**: Authenticated Traveller (session owner)
+- **Response `200 OK`**:
+  ```json
+  {
+    "id": "js-uuid",
+    "status": "cancelled",
+    "isRevoked": true,
+    "message": "Journey session cancelled."
+  }
+  ```
+
+#### `GET /journey-sessions/active`
+Retrieves the authenticated traveller's current in-progress journey session if active.
+- **Access**: Authenticated Traveller
+- **Response `200 OK`**: Current `JourneySessionResponse` or `null`.
+
+#### `POST /journey-sessions/{session_id}/simulate-reminder`
+Simulates a 5-minute pre-arrival reminder notification for demonstration and verification purposes.
+- **Access**: Authenticated Traveller (session owner)
+- **Response `200 OK`**:
+  ```json
+  {
+    "id": "js-uuid",
+    "reminderSent": true,
+    "notificationMode": "simulated_development_mode",
+    "message": "Simulated pre-arrival reminder triggered."
+  }
+  ```
+
+#### `GET /journey-shares/public/{token}`
+Tokenized public view for trusted contacts without requiring SafePath login credentials.
+- **Access**: Public (bearer token in URL path)
+- **Privacy & Security Guarantee**: **Zero creator PII leaked**. Creator name, user ID, email, and phone are never exposed in this payload.
+- **Response `200 OK`**:
+  ```json
+  {
+    "token": "sec-token-hex-32",
+    "status": "in_progress",
+    "origin": [12.9716, 77.5946],
+    "destination": [12.9756, 77.6066],
+    "routeName": "Safety-prioritized Route",
+    "etaMinutes": 18,
+    "distanceMeters": 1420.0,
+    "startedAt": "2026-11-01T14:30:00Z",
+    "expectedArrivalAt": "2026-11-01T14:48:00Z",
+    "completedAt": null,
+    "isRevoked": false,
+    "isExpired": false,
+    "disclaimer": "This page provides peer-to-peer journey reassurance for trusted contacts. SafePath Finder does NOT provide emergency dispatch or monitor active physical safety. If you believe the traveller is in immediate danger, contact official emergency services (112) directly.",
+    "peerReassuranceNotice": "Peer-to-peer journey status sharing. Not an active surveillance or emergency dispatch service. Missed check-in does not confirm emergency."
+  }
+  ```
+- **Responses on Invalidation**:
+  - `404 Not Found`: Invalid or revoked token.
+  - `410 Gone`: Expired journey session.
+
+---
+
+## 6. Operational Health & Error Codes
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
 | `/health` | `GET` | Root operational health check |
 | `/api/v1/health` | `GET` | API v1 operational health check |
+| `/api/v1/evidence/map-layers` | `GET` | Aggregated geospatial layer bundle & legend |
+| `/api/v1/journey-shares/public/{token}` | `GET` | Non-authenticated public trip viewer |
 | `/api/docs` | `GET` | Interactive Swagger UI documentation |
 | `/api/redoc` | `GET` | ReDoc API documentation |
 | `/api/openapi.json` | `GET` | OpenAPI 3.1 specification schema |
@@ -802,7 +1207,9 @@ Reads and updates global governance thresholds (stale days, auto-flag keywords, 
 - `401 Unauthorized`: Missing or invalid authentication token.
 - `403 Forbidden`: Insufficient role permissions or IDOR violation.
 - `404 Not Found`: Resource does not exist.
+- `410 Gone`: Resource expired (e.g., journey share token).
 - `422 Unprocessable Entity`: Request schema validation error.
 - `429 Too Many Requests`: Rate limit exceeded (e.g. password reset rate limiting).
 - `500 Internal Server Error`: Unhandled server exception.
+
 

@@ -1,0 +1,43 @@
+{
+  "datasetName": "National Crime Records Bureau (NCRB) Crime in India 2022 - Bengaluru Metropolitan City Statistics",
+  "sourceOrganisation": "National Crime Records Bureau (NCRB), Ministry of Home Affairs, Government of India",
+  "downloadUrl": "https://ncrb.gov.in/en/crime-in-india-table-addtional-table-and-chapter-contents",
+  "licence": "Government Open Data License - India (GODL-India)",
+  "geographicCoverage": "Bengaluru Police Commissionerate (Metropolitan Urban Area), Karnataka, India",
+  "collectionPeriod": "2022 Calendar Year (Published consolidated in 2023)",
+  "lastUpdated": "2023-12-01T00:00:00Z",
+  "importedAt": "2026-11-12T12:16:15.756658+00:00",
+  "spatialResolution": "Metropolitan Police Commissionerate / District Level (Aggregated)",
+  "populationDenominator": 8443675,
+  "totalIpcCrimes": 24198,
+  "totalIpcCrimeRatePer100k": 286.6,
+  "categories": {
+    "violentCrimes": {
+      "cases": 1932,
+      "ratePer100k": 22.9,
+      "description": "Murder, attempt to commit murder, grievous hurt, kidnapping & abduction"
+    },
+    "crimesAgainstWomen": {
+      "cases": 3124,
+      "ratePer100k": 37.0,
+      "description": "Assault on women with intent to outrage modesty, sexual harassment, cruelty by husband/relatives"
+    },
+    "propertyOffenses": {
+      "cases": 12845,
+      "ratePer100k": 152.1,
+      "description": "Theft, burglary, robbery, dacoity"
+    },
+    "cyberCrimes": {
+      "cases": 9940,
+      "ratePer100k": 117.7,
+      "description": "Financial fraud, identity theft, cyber harassment"
+    }
+  },
+  "epistemologicalPolicy": [
+    "National Crime Records Bureau (NCRB) crime statistics are published strictly as aggregate municipal totals and police commissionerate summaries.",
+    "Indian official government authorities do not publish open, point-level geocoded GPS coordinates of reported crimes under open data licenses.",
+    "SafePath Finder strictly prohibits disaggregating or distributing city-wide crime numbers across individual streets or synthetic pins.",
+    "Zero incident records on a route must never be interpreted or represented as proof that an area is crime-free.",
+    "Route-level crime evidence is honestly classified as UNAVAILABLE for pedestrian street segments in the pilot corridor."
+  ]
+}

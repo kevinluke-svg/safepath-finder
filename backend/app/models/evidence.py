@@ -19,6 +19,35 @@ class EvidenceSource(Base):
     stale_warning: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
+    # Open Data Provenance & Traceability Extensions
+    source_organisation: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    licence: Mapped[str] = mapped_column(String(255), default="Open Database License (ODbL) 1.0", nullable=False)
+    collection_period: Mapped[str] = mapped_column(String(100), default="", nullable=False)
+    last_updated: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    attribute_definitions: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    limitations: Mapped[List[str]] = mapped_column(JSON, default=list, nullable=False)
+
+    import_history = relationship("DatasetImportHistory", back_populates="source", cascade="all, delete-orphan")
+
+
+class DatasetImportHistory(Base):
+    """
+    Tracks chronological dataset ingestion and verification audit logs.
+    Ensures reproducibility, version tracking, and integrity of open datasets.
+    """
+    __tablename__ = "dataset_import_history"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(64), ForeignKey("evidence_sources.id", ondelete="CASCADE"), nullable=False, index=True)
+    import_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    records_imported: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="success", nullable=False)  # success, failed, unchanged
+    file_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+    source = relationship("EvidenceSource", back_populates="import_history")
+
 
 class StreetSegment(Base):
     __tablename__ = "street_segments"
@@ -50,6 +79,14 @@ class StreetSegment(Base):
     crime_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     crime_rate_per_km: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     community_reports_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Pedestrian Infrastructure attributes
+    sidewalk_status: Mapped[str] = mapped_column(String(30), default="unmapped", nullable=False)  # both, left, right, separate, none, unmapped
+    crossing_status: Mapped[str] = mapped_column(String(30), default="unmapped", nullable=False)  # traffic_signals, marked, unmarked, none, unmapped
+    has_tactile_paving: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    crossing_difficulty: Mapped[str] = mapped_column(String(30), default="unknown", nullable=False)  # low, moderate, high, unknown
+    infrastructure_summary: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
     evidence_summary: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
     observations = relationship("EvidenceObservation", back_populates="segment", cascade="all, delete-orphan")

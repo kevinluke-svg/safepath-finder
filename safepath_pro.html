@@ -37,14 +37,19 @@
         <a class="nav-link" href="#evidence-explorer" id="navEvidenceLink">Evidence Explorer</a>
         <a class="nav-link" href="#community" id="navCommunityLink">Community reports</a>
         <a class="nav-link" href="#safety-guidelines" id="navSafetyLink">Safety & Data</a>
+        <a class="nav-link" href="#dataset-catalog" id="navDatasetLink">Open Data Catalog</a>
       </nav>
 
       <div class="top-actions">
         <span class="demo-pill" id="demoBadge"><span class="demo-dot"></span> Prototype Mode</span>
+                <a href="/SAFEPATH_FINDER_FINAL_EVALUATION_REPORT.pdf" download="SafePath_Finder_Final_Evaluation_Report.pdf" class="btn btn-outline btn-sm" id="downloadReportBtn" title="Download Final Evaluation & System Handover Report (PDF)" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 500;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          <span>Report PDF</span>
+        </a>
         <button type="button" class="btn btn-secondary btn-sm" id="signInBtn">Sign in</button>
-        <button type="button" class="btn btn-quiet btn-sm" id="adminPortalBtn">Admin console ↗</button>
+        <button type="button" class="btn btn-quiet btn-sm" id="adminPortalBtn">Admin console <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></button>
         <button type="button" class="btn btn-primary btn-sm hidden" id="myWorkspaceBtn">My Workspace</button>
-        <button type="button" class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+        <button type="button" class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle navigation menu" aria-expanded="false"><span class="sp-icon-menu" aria-hidden="true"></span></button>
       </div>
     </div>
   </header>
@@ -57,9 +62,10 @@
       <a class="mobile-nav-item" href="#evidence-explorer" data-nav-close><span>03</span> Evidence Explorer (Segment Inspection)</a>
       <a class="mobile-nav-item" href="#community" data-nav-close><span>04</span> Community observations</a>
       <a class="mobile-nav-item" href="#safety-guidelines" data-nav-close><span>05</span> Safety disclaimers & methodology</a>
+      <a class="mobile-nav-item" href="#dataset-catalog" data-nav-close><span>06</span> Open Data Catalog</a>
       <hr style="margin: 8px 0; border: 0; border-top: 1px solid var(--border);" />
       <button type="button" class="btn btn-secondary btn-full" id="mobileSignInBtn">Sign in / Register</button>
-      <button type="button" class="btn btn-quiet btn-full" id="mobileAdminBtn">Open Admin Console ↗</button>
+      <button type="button" class="btn btn-quiet btn-full" id="mobileAdminBtn">Open Admin Console <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></button>
     </div>
   </div>
 
@@ -107,7 +113,7 @@
             <div class="input-with-icon">
               <span class="input-dot" aria-hidden="true"></span>
               <input class="text-input" id="originInput" name="origin" value="Jayanagar 4th Block, Bengaluru" required autocomplete="off" placeholder="Enter starting address, suburb, or landmark" aria-autocomplete="list" aria-controls="originSuggestions" />
-              <button type="button" class="input-clear-btn hidden" id="originClearBtn" aria-label="Clear starting point" title="Clear input">✕</button>
+              <button type="button" class="input-clear-btn hidden" id="originClearBtn" aria-label="Clear starting point" title="Clear input"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
             <div id="originSuggestions" class="autocomplete-dropdown hidden" role="listbox" aria-label="Starting point suggestions"></div>
           </div>
@@ -117,7 +123,7 @@
             <div class="input-with-icon">
               <span class="input-dot destination" aria-hidden="true"></span>
               <input class="text-input" id="destinationInput" name="destination" value="Lalbagh West Gate, Bengaluru" required autocomplete="off" placeholder="Enter destination address, suburb, or landmark" aria-autocomplete="list" aria-controls="destinationSuggestions" />
-              <button type="button" class="input-clear-btn hidden" id="destinationClearBtn" aria-label="Clear destination" title="Clear input">✕</button>
+              <button type="button" class="input-clear-btn hidden" id="destinationClearBtn" aria-label="Clear destination" title="Clear input"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
             <div id="destinationSuggestions" class="autocomplete-dropdown hidden" role="listbox" aria-label="Destination suggestions"></div>
           </div>
@@ -129,7 +135,7 @@
               <button type="button" class="quick-chip" data-set-route="cubbon-mgroad">Cubbon Park → MG Road</button>
             </div>
             <button type="button" class="btn-link" id="locateMeBtn">
-              <span aria-hidden="true">◎</span> Locate me
+              <span class="sp-icon-inline" aria-hidden="true" id="locateMeIcon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/></svg></span> Locate me
             </button>
           </div>
 
@@ -137,7 +143,33 @@
 
           <!-- Route Preferences Box -->
           <div class="planner-pref-box">
-            <div class="pref-box-title">Evidence & Route Weights</div>
+            <div class="pref-box-title">Intended Departure Period</div>
+            <div class="departure-period-selector" role="radiogroup" aria-label="Intended Departure Period">
+              <label class="departure-period-chip">
+                <input type="radio" name="departurePeriod" value="daytime" id="depDaytime" checked />
+                <span><span class="dep-icon" id="depSunIcon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></span> Daytime (06:00–18:00)</span>
+              </label>
+              <label class="departure-period-chip">
+                <input type="radio" name="departurePeriod" value="evening" id="depEvening" />
+                <span><span class="dep-icon" id="depSunsetIcon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M12 10V2"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m8 6 4-4 4 4"/><path d="M16 18a4 4 0 0 0-8 0"/></svg></span> Evening (18:00–22:00)</span>
+              </label>
+              <label class="departure-period-chip">
+                <input type="radio" name="departurePeriod" value="night" id="depNight" />
+                <span><span class="dep-icon" id="depMoonIcon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span> Night (22:00–06:00)</span>
+              </label>
+            </div>
+
+            <div class="departure-evidence-note" id="depEvidenceNote">
+              <span class="note-icon" id="depNoteIcon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+              <div id="depEvidenceNoteText">
+                <strong>Time-of-day evidence availability:</strong> In daytime, baseline daylight visibility is assumed. In evening and night periods, algorithm escalates penalties for unlit or unmapped stretches and late-night dog pack encounters.
+                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px;">
+                  Data Limitation: SafePath relies on static municipal asset audits and historical time-stamped incident logs. Live illumination monitoring, real-time power grid feeds, and live crime sensors are NOT genuinely available in this pilot.
+                </div>
+              </div>
+            </div>
+
+            <div class="pref-box-title" style="margin-top: 14px;">Evidence & Walkability Constraints</div>
             
             <label class="checkbox-row">
               <input type="checkbox" id="prefLighting" checked />
@@ -156,6 +188,14 @@
             </label>
 
             <label class="checkbox-row">
+              <input type="checkbox" id="prefStepFree" />
+              <span class="checkbox-copy">
+                <strong>Require step-free pedestrian path</strong>
+                <small>Strictly excludes pedestrian steps, escalators without lifts, and steep kerbs.</small>
+              </span>
+            </label>
+
+            <label class="checkbox-row">
               <input type="checkbox" id="prefAvoidUnknown" checked />
               <span class="checkbox-copy">
                 <strong>Highlight & flag segments with limited data</strong>
@@ -165,7 +205,7 @@
           </div>
 
           <button type="submit" class="btn btn-primary btn-full" id="compareRoutesSubmitBtn">
-            <span>↗</span> Compare route alternatives
+            <span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></span> Compare route alternatives
           </button>
 
           <div class="engine-status-badge">
@@ -179,39 +219,95 @@
       <section class="panel map-panel" aria-label="Interactive Map Preview">
         <div class="map-toolbar">
           <div class="map-title-wrap">
-            <div class="step-indicator">Step 02 · Spatial Inspection</div>
+            <div class="step-indicator">Step 02 · Spatial Inspection & Layer Controls</div>
             <div class="map-title" id="activeMapTitle">Jayanagar 4th Block → Lalbagh West Gate</div>
+            <div class="map-sub" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+              Toggle layers independently. Evidence layers never visually masquerade as selected walking routes.
+            </div>
           </div>
-          <div class="map-tools">
-            <button type="button" class="map-toggle-btn" id="toggleCoverageOverlayBtn" aria-pressed="true">
-              <span class="map-toggle-dot"></span> Evidence coverage layer
-            </button>
-            <button type="button" class="map-toggle-btn" id="toggleObservationsBtn" aria-pressed="true">
-              <span class="map-toggle-dot"></span> Community markers
-            </button>
-            <button type="button" class="map-toggle-btn" id="togglePlacesBtn" aria-pressed="true">
-              <span class="map-toggle-dot"></span> Transit & Safe havens
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="fitMapBoundsBtn">Fit routes</button>
+          <div class="map-actions-top">
+            <button type="button" class="btn btn-secondary btn-sm" id="fitMapBoundsBtn" title="Reset zoom to fit calculated routes">Fit routes</button>
           </div>
+        </div>
+
+        <!-- Independently Controllable Layer Controls Checklist -->
+        <div class="map-layer-controls-bar" role="toolbar" aria-label="Map Layer Controls">
+          <span class="layer-control-label">Layers:</span>
+          <button type="button" class="map-toggle-btn active" id="toggleRoutesBtn" aria-pressed="true" title="Toggle calculated walking route polylines">
+            <span class="map-toggle-dot" style="background:#2563eb;"></span> Routes
+          </button>
+          <button type="button" class="map-toggle-btn active" id="toggleLightingBtn" aria-pressed="true" title="Street-lighting survey classifications (lit, unlit, unmapped)">
+            <span class="map-toggle-dot" style="background:#eab308;"></span> Street lighting
+          </button>
+          <button type="button" class="map-toggle-btn active" id="toggleDogsBtn" aria-pressed="true" title="Street dog sightings, groups, and aggressive encounters">
+            <span class="map-toggle-dot" style="background:#f97316;"></span> Dog encounters
+          </button>
+          <button type="button" class="map-toggle-btn active" id="toggleObservationsBtn" aria-pressed="true" title="Moderated community observations (hazards, blockages)">
+            <span class="map-toggle-dot" style="background:#8b5cf6;"></span> Community feedback
+          </button>
+          <button type="button" class="map-toggle-btn active" id="togglePlacesBtn" aria-pressed="true" title="Police stations, hospitals, and 24/7 pharmacies">
+            <span class="map-toggle-dot" style="background:#059669;"></span> Police & Hospitals
+          </button>
+          <button type="button" class="map-toggle-btn active" id="toggleLandmarksBtn" aria-pressed="true" title="Transit stations, metro hubs, and civic landmarks">
+            <span class="map-toggle-dot" style="background:#0284c7;"></span> Landmarks & Transit
+          </button>
+          <button type="button" class="map-toggle-btn active" id="toggleInfraBtn" aria-pressed="true" title="Pedestrian footways, sidewalks, and designated crossings">
+            <span class="map-toggle-dot" style="background:#10b981;"></span> Footpaths & Crossings
+          </button>
+          <button type="button" class="map-toggle-btn" id="toggleCrimeBtn" aria-pressed="false" title="Historical police incident density hotspots (off by default to avoid clutter)">
+            <span class="map-toggle-dot" style="background:#dc2626;"></span> Crime density
+          </button>
         </div>
 
         <div id="map" role="region" aria-label="Leaflet route map showing walking routes, evidence coverage overlay, and community reports"></div>
 
+        <!-- Structured Legend Distinguishing Data Realities -->
         <div class="map-footer">
-          <div class="legend-group">
-            <span class="legend-item"><span class="legend-swatch evidence"></span> Safety-prioritized</span>
-            <span class="legend-item"><span class="legend-swatch balanced"></span> Balanced</span>
-            <span class="legend-item"><span class="legend-swatch shortest"></span> Fastest</span>
-            <span class="legend-item"><span class="legend-swatch alternative"></span> Alternative</span>
-            <span style="color: var(--border-strong);">|</span>
-            <span class="legend-item"><span class="legend-swatch-circle adequate"></span> Adequate evidence</span>
-            <span class="legend-item"><span class="legend-swatch-circle limited"></span> Limited evidence</span>
-            <span class="legend-item"><span class="legend-swatch-circle insufficient"></span> Insufficient data</span>
+          <div class="legend-sections-grid">
+            <div class="legend-col">
+              <span class="legend-header">Walking Routes</span>
+              <div class="legend-items">
+                <span class="legend-item"><span class="legend-swatch evidence" style="display:none;"></span><span class="legend-line-sample route-solid"></span> <span class="badge badge-teal" style="font-size:9px; padding:1px 4px; margin-right:3px;">Solid</span> Safety-prioritized</span>
+                <span class="legend-item"><span class="legend-swatch balanced" style="display:none;"></span><span class="legend-line-sample route-dashed"></span> <span class="badge badge-amber" style="font-size:9px; padding:1px 4px; margin-right:3px;">Dashed</span> Balanced</span>
+                <span class="legend-item"><span class="legend-swatch shortest" style="display:none;"></span><span class="legend-line-sample route-dotted"></span> <span class="badge badge-blue" style="font-size:9px; padding:1px 4px; margin-right:3px;">Dotted</span> Fastest</span>
+                <span class="legend-item"><span class="legend-swatch alternative" style="display:none;"></span><span class="legend-line-sample route-dashdot"></span> <span class="badge badge-purple" style="font-size:9px; padding:1px 4px; margin-right:3px;">Dash-dot</span> Alternative</span>
+              </div>
+            </div>
+
+            <div class="legend-col">
+              <span class="legend-header">Actual Mapped Data</span>
+              <div class="legend-items">
+                <span class="legend-item"><span class="legend-marker-glyph sp-shape-shield sp-bg-navy"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Police station</span>
+                <span class="legend-item"><span class="legend-marker-glyph sp-shape-square sp-bg-crimson"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M12 6v4"/><path d="M14 14h-4"/><path d="M14 18h-4"/><path d="M14 8h-4"/><path d="M18 12h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/><path d="M18 22V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v18"/></svg></span> Hospital</span>
+                <span class="legend-item"><span class="legend-line-sample" style="border-top: 3px solid #047857;"></span> Mapped sidewalk</span>
+                <span class="legend-item"><span class="legend-marker-glyph sp-shape-square sp-bg-sky"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/></svg></span> Metro / Transit</span>
+              </div>
+            </div>
+
+            <div class="legend-col">
+              <span class="legend-header">Community Reports</span>
+              <div class="legend-items">
+                <span class="legend-item"><span class="legend-marker-glyph sp-shape-diamond sp-bg-violet"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span> Verified observation</span>
+                <span class="legend-item"><span class="legend-marker-glyph sp-shape-circle sp-bg-slate"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></span> Dog sighting (calm)</span>
+                <span class="legend-item"><span class="legend-marker-glyph sp-shape-diamond sp-bg-amber-dark"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg></span> Aggressive encounter</span>
+                <span class="legend-item"><span class="legend-marker-glyph sp-shape-octagon sp-bg-dark-crimson"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span> Dog bite incident</span>
+              </div>
+            </div>
+
+            <div class="legend-col">
+              <span class="legend-header">Inferred / Unknown State</span>
+              <div class="legend-items">
+                <span class="legend-item"><span class="legend-swatch-circle adequate"></span> Adequate evidence</span>
+                <span class="legend-item"><span class="legend-swatch-circle limited"></span> Limited evidence</span>
+                <span class="legend-item"><span class="legend-line-sample" style="border-top: 3px dashed #94a3b8;"></span> Insufficient / Unsurveyed</span>
+              </div>
+            </div>
           </div>
-          <span style="font-size: 10.5px; color: var(--warning-text);">
-            ⓘ Overlay colors show data availability, NOT danger. Risk indicators are model estimates based on available evidence, not verified probabilities of victimization.
-          </span>
+
+          <div class="legend-disclaimer-note">
+            <strong>Evidence Disclaimer:</strong> Street-lighting, dog sightings, and infrastructure layers reflect documented observation assets.
+            Absence of crime or hazard pins does NOT verify a street is safe. SafePath estimates environmental trade-offs without making absolute safety guarantees.
+          </div>
         </div>
       </section>
     </section>
@@ -224,8 +320,8 @@
           <p id="routeSubheading">Select a route card to inspect its street segments, evidence quality, and trade-offs.</p>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn btn-secondary btn-sm" id="saveCurrentPlanBtn">＋ Save this plan</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="shareTripPreviewBtn">↗ Share trip ETA</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="saveCurrentPlanBtn"><span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></span> Save this plan</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="shareTripPreviewBtn"><span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg></span> Share trip ETA</button>
         </div>
       </div>
 
@@ -248,7 +344,7 @@
           Unlike black-box navigation apps that assign a singular, unverifiable safety score to an entire trip, SafePath breaks routes down into discrete street segments. Inspect exactly which data sources corroborate each segment, when they were last refreshed, and what critical information is missing.
         </p>
         <div class="evidence-disclaimer-banner">
-          <span class="notice-icon" style="width: 18px; height: 18px; flex: 0 0 18px;">!</span>
+          <span class="sp-icon-inline" style="flex-shrink: 0;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
           <span>
             <strong>Fundamental Research Principle:</strong> Never equate "no crime reports" with low risk. An undocumented street is merely unknown, not verified safe.
           </span>
@@ -288,34 +384,47 @@
         <div class="pref-comparison-grid">
           <div class="pref-slider-card">
             <label for="sliderLighting">
-              <span>Lighting evidence weight</span>
+              <span>Street Lighting Weight (w_lighting)</span>
               <strong id="valLighting">50%</strong>
             </label>
-            <input type="range" id="sliderLighting" min="0" max="100" value="50" step="5" />
-            <small style="font-size: 10.5px; color: var(--text-muted);">Penalizes routes with uncorroborated dark stretches.</small>
+            <input type="range" id="sliderLighting" min="0" max="100" value="50" step="5" aria-label="Street lighting weight percentage" />
+            <small style="font-size: 10.5px; color: var(--text-muted);">Calibrates illumination priority in composite risk R_observed.</small>
           </div>
 
           <div class="pref-slider-card">
             <label for="sliderUnknown">
-              <span>Aversion to missing data</span>
+              <span>Aversion to Missing Data (R_unknown)</span>
               <strong id="valUnknown">30%</strong>
             </label>
-            <input type="range" id="sliderUnknown" min="0" max="100" value="30" step="5" />
-            <small style="font-size: 10.5px; color: var(--text-muted);">Demands high verification before recommending residential shortcuts.</small>
+            <input type="range" id="sliderUnknown" min="0" max="100" value="30" step="5" aria-label="Aversion to missing data prior percentage" />
+            <small style="font-size: 10.5px; color: var(--text-muted);">Sets neutral prior R_unknown in R_effective = Q·R_obs + (1-Q)·R_unknown.</small>
           </div>
 
           <div class="pref-slider-card">
             <label for="sliderTime">
-              <span>Travel time priority</span>
+              <span>Travel Time Priority (vs &lambda; Risk Penalty)</span>
               <strong id="valTime">20%</strong>
             </label>
-            <input type="range" id="sliderTime" min="0" max="100" value="20" step="5" />
-            <small style="font-size: 10.5px; color: var(--text-muted);">Favours direct geometry and shortest walking distance.</small>
+            <input type="range" id="sliderTime" min="0" max="100" value="20" step="5" aria-label="Travel time priority percentage" />
+            <small style="font-size: 10.5px; color: var(--text-muted);">Scales lambda in Cost(e) = T(e) &times; (1 + &lambda; &times; R_effective(e)).</small>
           </div>
         </div>
 
+        <!-- 6 Implemented Model Dimensions Documentation -->
+        <div style="margin: 12px 0 10px 0; padding: 10px 14px; background: #ffffff; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; line-height: 1.5; color: var(--text-muted);">
+          <strong style="color: var(--text-main); display: block; margin-bottom: 4px;">Implemented Risk Dimensions & Weight Normalization:</strong>
+          The backend synthesizes 6 empirical dimensions:
+          <strong>(1) Street Lighting</strong> (OSM tags & surveyed lamps),
+          <strong>(2) Pedestrian Infrastructure</strong> (sidewalks, crossings, tactile paving),
+          <strong>(3) Stray Dog Encounters</strong> (calm vs aggressive reports),
+          <strong>(4) Historical Crime</strong> (public incident bulletins),
+          <strong>(5) Community Feedback</strong> (corroborated reports), and
+          <strong>(6) Emergency Access</strong> (police & hospital proximity).
+          Weights are dynamically normalized so &sum; w<sub>i</sub> = 1.0, adjusted by temporal profiles (Daytime, Evening, Night).
+        </div>
+
         <div class="pref-impact-note" id="preferenceImpactNote">
-          <strong>Current Ranking Logic:</strong> Evidence-led Route ranks #1 because lighting evidence and uncertainty aversion outweigh the 5-minute time savings of the Shortest Route.
+          <strong>Interactive Sensitivity Evaluation:</strong> Adjust sliders to dynamically update backend parameters, re-run multi-criteria routing, and observe route trade-offs in real time.
         </div>
       </div>
     </section>
@@ -329,7 +438,7 @@
           <p>Community reports provide localized context regarding broken streetlights, sidewalk blockages, and visibility concerns.</p>
         </div>
         <button type="button" class="btn btn-primary btn-sm" id="openReportModalBtn">
-          ＋ Add street observation
+          <span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span> Add street observation
         </button>
       </div>
 
@@ -337,6 +446,7 @@
         <div>
           <div class="report-filter-bar">
             <button type="button" class="filter-chip active" data-report-filter="all">All reports</button>
+            <button type="button" class="filter-chip" data-report-filter="dogs">Dog encounters</button>
             <button type="button" class="filter-chip" data-report-filter="pending">Pending review</button>
             <button type="button" class="filter-chip" data-report-filter="approved">Approved & Corroborated</button>
             <button type="button" class="filter-chip" data-report-filter="flagged">Flagged</button>
@@ -360,10 +470,46 @@
             <li>One anonymous report does not prove an area is dangerous; corroboration is required.</li>
           </ul>
           <div class="notice" style="margin-bottom: 0; padding: 10px 12px; font-size: 11.5px;">
-            <span class="notice-icon" style="width: 18px; height: 18px; flex: 0 0 18px;">!</span>
+            <span class="sp-icon-inline" style="flex-shrink: 0;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
             <div>Reports submitted here are NOT monitored by police or emergency dispatchers.</div>
           </div>
         </aside>
+      </div>
+    </section>
+
+    <!-- Open Data Catalog & Evidence Sources Registry -->
+    <section class="panel" id="dataset-catalog" style="padding: 24px 28px; margin-bottom: 30px;" aria-label="Open Data Catalog">
+      <div class="eyebrow">OPEN DATA INGESTION & PROVENANCE REGISTRY</div>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <h2 style="font-size: 20px; margin-bottom: 6px;">Open-Source Evidence Datasets</h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin: 0; max-width: 820px;">
+            Every environmental indicator in SafePath is traceable to an official or openly licensed source. Unknown information is preserved honestly as unmapped uncertainty rather than assumed safety.
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnRefreshCatalog">Refresh Registry</button>
+        </div>
+      </div>
+
+      <div class="table-responsive" style="overflow-x: auto;">
+        <table class="data-table" id="datasetCatalogTable" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border); text-align: left; color: var(--text-muted);">
+              <th style="padding: 10px 12px;">Dataset Name</th>
+              <th style="padding: 10px 12px;">Source Organisation</th>
+              <th style="padding: 10px 12px;">Licence</th>
+              <th style="padding: 10px 12px;">Coverage Area</th>
+              <th style="padding: 10px 12px;">Reporting Period</th>
+              <th style="padding: 10px 12px;">Records</th>
+              <th style="padding: 10px 12px;">Status</th>
+              <th style="padding: 10px 12px;">Limitations & Epistemic Notes</th>
+            </tr>
+          </thead>
+          <tbody id="datasetCatalogBody">
+            <!-- Dynamically populated via renderDatasetCatalog() -->
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -405,6 +551,7 @@
           </div>
         </div>
         <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+          <a href="/SAFEPATH_FINDER_FINAL_EVALUATION_REPORT.pdf" download="SafePath_Finder_Final_Evaluation_Report.pdf" style="color: var(--primary-600); font-weight: 600; text-decoration: underline;">Download Final Report (PDF)</a>
           <a href="#safety-guidelines">Methodology & Ethics</a>
           <button type="button" id="openFeedbackBtn" style="color: inherit; text-decoration: underline; background: none; border: 0; padding: 0; font-size: inherit; font-family: inherit; cursor: pointer;">Share Feedback</button>
           <a href="#" id="footerPrivacyLink">Privacy & Local Storage</a>
@@ -426,7 +573,7 @@
         </p>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" id="backToPlannerBtn">
-        ← Back to Route Planner
+        <span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></span> Back to Route Planner
       </button>
     </div>
 
@@ -444,31 +591,31 @@
 
         <nav class="traveller-nav" aria-label="Workspace sections">
           <button type="button" class="traveller-nav-btn active" data-traveller-tab="overview">
-            <span class="traveller-nav-icon">▦</span> Overview
+            <span class="traveller-nav-icon" id="navIconOverview"></span> Overview
           </button>
           <button type="button" class="traveller-nav-btn" data-traveller-tab="saved-plans">
-            <span class="traveller-nav-icon">↗</span> Saved Journeys
+            <span class="traveller-nav-icon" id="navIconJourneys"></span> Saved Journeys
           </button>
           <button type="button" class="traveller-nav-btn" data-traveller-tab="journey-history">
-            <span class="traveller-nav-icon">⏱</span> Journey History
+            <span class="traveller-nav-icon" id="navIconHistory"></span> Journey History
           </button>
           <button type="button" class="traveller-nav-btn" data-traveller-tab="saved-places">
-            <span class="traveller-nav-icon">⚑</span> Saved Places
+            <span class="traveller-nav-icon" id="navIconPlaces"></span> Saved Places
           </button>
           <button type="button" class="traveller-nav-btn" data-traveller-tab="my-observations">
-            <span class="traveller-nav-icon">◎</span> My Observations
+            <span class="traveller-nav-icon" id="navIconObs"></span> My Observations
           </button>
           <button type="button" class="traveller-nav-btn" data-traveller-tab="trusted-contacts">
-            <span class="traveller-nav-icon">♡</span> Trusted Contacts
+            <span class="traveller-nav-icon" id="navIconContacts"></span> Trusted Contacts
           </button>
           <button type="button" class="traveller-nav-btn" data-traveller-tab="trip-sharing">
-            <span class="traveller-nav-icon">⎘</span> Trip Sharing & Arrival
+            <span class="traveller-nav-icon" id="navIconSharing"></span> Trip Sharing & Arrival
           </button>
           <button type="button" class="traveller-nav-btn" data-traveller-tab="preferences">
-            <span class="traveller-nav-icon">⚙</span> Route Preferences
+            <span class="traveller-nav-icon" id="navIconPrefs"></span> Route Preferences
           </button>
           <button type="button" class="traveller-nav-btn" data-traveller-tab="privacy-data">
-            <span class="traveller-nav-icon">◇</span> Privacy & Storage
+            <span class="traveller-nav-icon" id="navIconPrivacy"></span> Privacy & Storage
           </button>
         </nav>
 
@@ -511,7 +658,7 @@
           <div class="panel" style="padding: 22px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
               <h2 style="font-size: 17px;">Recent Saved Journeys</h2>
-              <button type="button" class="btn-link" data-traveller-tab="saved-plans">View all plans →</button>
+              <button type="button" class="btn-link" data-traveller-tab="saved-plans">View all plans <span class="sp-icon-inline"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span></button>
             </div>
             <div class="card-list" id="overviewSavedPlansList">
               <!-- Rendered dynamically -->
@@ -527,7 +674,7 @@
                 <h2 style="font-size: 18px;">Saved Journey Plans</h2>
                 <p style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">Plans saved on this device for quick access in the route planner.</p>
               </div>
-              <button type="button" class="btn btn-primary btn-sm" id="createNewPlanBtn">＋ Plan a new journey</button>
+              <button type="button" class="btn btn-primary btn-sm" id="createNewPlanBtn"><span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span> Plan a new journey</button>
             </div>
             <div class="card-list" id="allSavedPlansList">
               <!-- Rendered dynamically -->
@@ -554,7 +701,7 @@
                 <h2 style="font-size: 18px;">Saved Places</h2>
                 <p style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">Frequent origins and destinations (Home, Work, Campus, Transit).</p>
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="addSavedPlaceBtn">＋ Add place</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="addSavedPlaceBtn"><span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span> Add place</button>
             </div>
             <div class="card-list" id="savedPlacesList">
               <!-- Rendered dynamically -->
@@ -570,7 +717,7 @@
                 <h2 style="font-size: 18px;">My Submitted Observations</h2>
                 <p style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">Review the moderation status of reports you have contributed.</p>
               </div>
-              <button type="button" class="btn btn-primary btn-sm" id="workspaceAddReportBtn">＋ Add observation</button>
+              <button type="button" class="btn btn-primary btn-sm" id="workspaceAddReportBtn"><span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span> Add observation</button>
             </div>
             <div class="card-list" id="mySubmittedReportsList">
               <!-- Rendered dynamically -->
@@ -588,7 +735,7 @@
                   Designated people to receive your route link and arrival confirmation.
                 </p>
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="openAddContactModalBtn">＋ Add contact</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="openAddContactModalBtn"><span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span> Add contact</button>
             </div>
             <div class="notice" style="margin-bottom: 16px; font-size: 12px;">
               <span class="notice-icon">i</span>
@@ -701,33 +848,33 @@
 
       <nav class="admin-sidebar-nav" aria-label="Admin tabs">
         <button type="button" class="admin-nav-link active" data-admin-tab="overview">
-          <span>▦</span> Overview
+          <span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></span> Overview
         </button>
         <button type="button" class="admin-nav-link" data-admin-tab="reports">
-          <span>◎</span> Report Moderation
+          <span class="admin-nav-icon" id="adminNavReports"></span> Report Moderation
           <span class="badge-count" id="adminPendingCountBadge">2</span>
         </button>
         <button type="button" class="admin-nav-link" data-admin-tab="users">
-          <span>♙</span> User Management
+          <span class="admin-nav-icon" id="adminNavUsers"></span> User Management
         </button>
         <button type="button" class="admin-nav-link" data-admin-tab="feedback">
-          <span>💬</span> User Feedback
+          <span class="admin-nav-icon" id="adminNavFeedback"></span> User Feedback
         </button>
         <button type="button" class="admin-nav-link" data-admin-tab="data-quality">
 
-          <span>◇</span> Data Sources & Quality
+          <span class="admin-nav-icon" id="adminNavData"></span> Data Sources & Quality
         </button>
         <button type="button" class="admin-nav-link" data-admin-tab="audit-log">
-          <span>≡</span> Audit Trail
+          <span class="admin-nav-icon" id="adminNavAudit"></span> Audit Trail
         </button>
         <button type="button" class="admin-nav-link" data-admin-tab="settings">
-          <span>⚙</span> System Settings
+          <span class="admin-nav-icon" id="adminNavSettings"></span> System Settings
         </button>
       </nav>
 
       <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border);">
         <button type="button" class="btn btn-secondary btn-full btn-sm" id="exitAdminPortalBtn">
-          ← Exit Admin Console
+          <span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></span> Exit Admin Console
         </button>
       </div>
     </aside>
@@ -741,7 +888,7 @@
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
           <span class="demo-pill"><span class="demo-dot"></span> Demo Admin Mode</span>
-          <button type="button" class="btn btn-secondary btn-sm" id="adminRefreshAllBtn">↻ Refresh</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="adminRefreshAllBtn"><span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></span> Refresh</button>
         </div>
       </header>
 
@@ -803,7 +950,7 @@
                   <option value="rejected">Rejected</option>
                 </select>
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="exportReportsCsvBtn">↓ Export CSV</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="exportReportsCsvBtn"><span class="sp-btn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></span> Export CSV</button>
             </div>
 
             <table class="admin-data-table">
@@ -1082,36 +1229,83 @@
         <div class="form-group">
           <label class="form-label" for="reportCategoryInput">Observation category</label>
           <select class="select-input" id="reportCategoryInput" required>
-            <option value="broken_lighting">Broken street lighting</option>
+            <option value="broken_lighting">Broken street lighting / dark stretch</option>
             <option value="blocked_footpath">Blocked footpath / sidewalk obstruction</option>
+            <option value="crossing_issue">Footpath or crossing issue / missing stripes</option>
+            <option value="infrastructure_deficiency">Pedestrian infrastructure deficiency</option>
             <option value="poor_visibility">Poor visibility / overgrown foliage</option>
-            <option value="construction_hazard">Construction or road hazard</option>
-            <option value="access_facility">Access / Public transit facility</option>
-            <option value="other_concern">Other street condition</option>
+            <option value="crime_incident">Crime-related incident / safety observation</option>
+            <option value="access_facility">Public assistance or transit access issue</option>
+            <optgroup label="Stray & Street Dog Encounters">
+              <option value="dog_sighting">Stray dog sighting (calm / informational)</option>
+              <option value="dog_group">Group or pack of dogs</option>
+              <option value="dog_aggressive">Aggressive encounter (chasing / barking)</option>
+              <option value="dog_bite">Physical attack or bite incident</option>
+            </optgroup>
+            <option value="other_concern">Other street safety observation</option>
           </select>
+        </div>
+
+        <!-- Dynamic Dog Encounter Specifics Container -->
+        <div id="dogReportFields" style="display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-bottom: 14px;">
+          <div style="font-size: 11.5px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">Dog Encounter Specifics</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="reportDogCountInput" style="font-size: 11px;">Number of dogs (if observed)</label>
+              <input type="number" class="text-input" id="reportDogCountInput" min="1" max="50" placeholder="e.g. 1, 3" />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="reportEncounterTimeInput" style="font-size: 11px;">Encounter date & time</label>
+              <input type="datetime-local" class="text-input" id="reportEncounterTimeInput" />
+            </div>
+          </div>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #334155; cursor: pointer;">
+            <input type="checkbox" id="reportIsAggressiveInput" />
+            <span>Encounter involved aggressive behavior (growling, lunging, chasing)</span>
+          </label>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="reportLocationInput">Street location or intersection</label>
-          <input class="text-input" id="reportLocationInput" required placeholder="e.g. 10th Main Road near 28th Cross" maxlength="100" />
-          <small style="font-size: 10.5px; color: var(--text-muted);">Please provide approximate public street names only. Do not provide private home numbers.</small>
+          <div style="display: flex; gap: 8px;">
+            <input class="text-input" id="reportLocationInput" required placeholder="e.g. 10th Main Road near 28th Cross" maxlength="100" style="flex:1;" />
+            <button type="button" class="btn btn-secondary btn-sm" id="btnPickMapLocation" title="Click on the Leaflet map behind to pin coordinates"><span class="btn-icon" id="btnMapPinIcon"></span> Map Pin</button>
+          </div>
+          <small style="font-size: 10.5px; color: var(--text-muted);">Please provide public street names only. Do not disclose private residential addresses or personal names.</small>
+        </div>
+
+        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label class="form-label" for="reportLatitudeInput" style="font-size: 11px;">Latitude (click map or enter)</label>
+            <input type="number" step="0.000001" class="text-input" id="reportLatitudeInput" placeholder="12.9257" />
+          </div>
+          <div>
+            <label class="form-label" for="reportLongitudeInput" style="font-size: 11px;">Longitude (click map or enter)</label>
+            <input type="number" step="0.000001" class="text-input" id="reportLongitudeInput" placeholder="77.5833" />
+          </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="reportDescInput">What did you observe?</label>
-          <textarea class="textarea-input" id="reportDescInput" required rows="3" placeholder="Describe the physical condition (e.g. lamp pole flickering, construction sand spilled on footpath)." minlength="10" maxlength="400"></textarea>
+          <label class="form-label" for="reportObservedAtInput">Observation timestamp</label>
+          <input type="datetime-local" class="text-input" id="reportObservedAtInput" />
+          <small style="font-size: 10.5px; color: var(--text-muted);">Timestamp must be in the past or present. Future dates are automatically rejected.</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reportDescInput">Observation details (optional notes)</label>
+          <textarea class="textarea-input" id="reportDescInput" rows="3" placeholder="Describe the physical condition (e.g. pole luminaire unlit, open excavation on footpath, faded pedestrian zebra crossing)." maxlength="400"></textarea>
         </div>
 
         <div class="notice" style="margin-bottom: 0; font-size: 11px;">
-          <span class="notice-icon" style="width: 18px; height: 18px; flex: 0 0 18px;">!</span>
+          <span class="sp-icon-inline" style="flex-shrink: 0;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
           <div>
-            Reports are assigned <code>pending</code> status for moderation. Submissions are saved locally in this preview.
+            <strong>Moderation Review & Anti-Spam:</strong> New observations enter <code>pending</code> status and must pass automated duplicate screening and community/admin confirmation before altering route recommendations. Personal identifiable information (PII) is never displayed publicly.
           </div>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
           <button type="button" class="btn btn-secondary btn-sm" id="cancelReportBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary btn-sm">Submit observation</button>
+          <button type="submit" class="btn btn-primary btn-sm">Submit for review</button>
         </div>
       </form>
     </div>
@@ -1221,11 +1415,11 @@
           <label class="form-label" for="feedbackRating">Experience Rating (Optional)</label>
           <select class="select-input" id="feedbackRating">
             <option value="">No rating</option>
-            <option value="5">★★★★★ Excellent (5/5)</option>
-            <option value="4">★★★★☆ Good (4/5)</option>
-            <option value="3">★★★☆☆ Average (3/5)</option>
-            <option value="2">★★☆☆☆ Needs Improvement (2/5)</option>
-            <option value="1">★☆☆☆☆ Poor (1/5)</option>
+            <option value="5">5 / 5 — Excellent</option>
+            <option value="4">4 / 5 — Good</option>
+            <option value="3">3 / 5 — Average</option>
+            <option value="2">2 / 5 — Needs Improvement</option>
+            <option value="1">1 / 5 — Poor</option>
           </select>
         </div>
 
@@ -1276,10 +1470,117 @@
     </div>
   </div>
 
+  <!-- ACTIVE JOURNEY SESSION STICKY BANNER -->
+  <div id="activeJourneyBanner" class="active-journey-banner hidden" role="region" aria-label="Active Journey Session">
+    <div class="active-journey-content">
+      <div class="active-journey-badge">
+        <span class="pulsing-green-dot"></span>
+        <strong>Live Walk Protection Active</strong>
+      </div>
+      <div class="active-journey-details">
+        Walking to <strong id="activeJourneyDest">Lalbagh West Gate</strong> via <span id="activeJourneyRoute">Safety-prioritized</span> ·
+        Expected Arrival in <span class="countdown-badge" id="activeJourneyCountdown">--:--</span>
+      </div>
+      <div class="active-journey-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="btnArrivalCheckIn"><span class="btn-icon" id="btnCheckInIcon"></span> I Have Arrived Safely</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnSimulateReminder"><span class="btn-icon" id="btnReminderIcon"></span> Test 5-Min Reminder</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnCopyShareLink"><span class="btn-icon" id="btnCopyIcon"></span> Copy Share Link</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnRevokeJourney" style="color:var(--danger,#dc2626);">End / Revoke</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- START JOURNEY SESSION & SHARING MODAL -->
+  <div class="modal-backdrop" id="journeySessionModal" role="dialog" aria-modal="true" aria-labelledby="journeyModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow">TRUSTED JOURNEY PROTECTION</div>
+          <h3 id="journeyModalTitle">Start Walk & Share Journey ETA</h3>
+          <p>Voluntarily share your intended route, estimated arrival time, and progress with trusted contacts.</p>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeJourneyModalBtn" aria-label="Close dialog">×</button>
+      </div>
+
+      <form id="journeySessionForm" class="modal-body">
+        <div class="journey-summary-box">
+          <div class="journey-summary-row">
+            <span>Destination:</span>
+            <strong id="modalJourneyDest">Lalbagh West Gate, Bengaluru</strong>
+          </div>
+          <div class="journey-summary-row">
+            <span>Route Choice:</span>
+            <strong id="modalJourneyRoute">Safety-prioritized Route</strong>
+          </div>
+          <div class="journey-summary-row">
+            <span>Distance & Duration:</span>
+            <span id="modalJourneyDistanceDuration">1.8 km (~24 mins walk)</span>
+          </div>
+          <div class="journey-summary-row">
+            <span>Calculated Arrival ETA:</span>
+            <strong id="modalJourneyETA">--:--</strong>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Select Trusted Contacts to Notify</label>
+          <div class="contacts-checklist-box" id="journeyContactsChecklist">
+            <!-- Populated dynamically with user's trusted contacts -->
+          </div>
+        </div>
+
+        <div class="consent-box">
+          <label class="consent-label">
+            <input type="checkbox" id="journeyConsentCheck" required />
+            <span>
+              <strong>Voluntary Consent to Share:</strong> I voluntarily choose to share my intended walking path, estimated arrival time, and check-in status with my selected trusted contacts. I understand that I can cancel or end this sharing session at any time.
+            </span>
+          </label>
+        </div>
+
+        <div class="notice" style="margin-bottom: 0; font-size: 11px;">
+          <span class="sp-icon-inline" style="flex-shrink: 0;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sp-icon " aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+          <div>
+            <strong>Peer-to-Peer Reassurance Only:</strong> SafePath Finder is NOT an emergency dispatch service and does NOT notify police, 112, or ambulance services. A missed check-in does not establish that an emergency has occurred.
+            <div style="margin-top: 4px; color: var(--text-muted);">
+              Mode: <code>Simulated development mode</code> (Shareable secure expiring token link generated for SMS/WhatsApp pasting without live SMS gateway charges).
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="cancelJourneySessionBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="confirmStartJourneyBtn">Start Protected Walk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PUBLIC TOKENIZED JOURNEY SHARE VIEWER MODAL -->
+  <div class="modal-backdrop" id="publicJourneyModal" role="dialog" aria-modal="true" aria-labelledby="publicJourneyTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow">SAFEPATH JOURNEY COMPANION</div>
+          <h3 id="publicJourneyTitle">Shared Walking Journey</h3>
+          <p>You are viewing a shared pedestrian journey status link.</p>
+        </div>
+        <button type="button" class="modal-close-btn" id="closePublicJourneyModalBtn" aria-label="Close dialog">×</button>
+      </div>
+
+      <div class="modal-body" id="publicJourneyContent">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast-notice" role="status" aria-live="polite"></div>
 
   <!-- Leaflet Map JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- SafePath Professional SVG Icon System -->
+  <script src="icons.js"></script>
 
   <!-- SafePath API Service -->
   <script src="api_service.js"></script>

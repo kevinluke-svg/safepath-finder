@@ -1,0 +1,143 @@
+[
+  {
+    "id": "ds-osm-pedestrian",
+    "name": "OpenStreetMap Pedestrian Way Network",
+    "sourceOrganisation": "OpenStreetMap Contributors",
+    "url": "https://download.geofabrik.de/asia/india.html",
+    "licence": "Open Database License (ODbL) 1.0",
+    "geographicCoverage": "Bengaluru Pilot Study Area (South: 12.9200, West: 77.5700, North: 12.9850, East: 77.6200)",
+    "collectionPeriod": "Continuous crowd-mapped spatial vector graph (Extract: October 2026)",
+    "importedAt": "2026-10-28T09:41:14Z",
+    "lastUpdated": "2026-10-28T09:41:14Z",
+    "recordCount": 41284,
+    "status": "active",
+    "attributeDefinitions": {
+      "highway": "Road and path classification (footway, pedestrian, residential, tertiary, secondary, primary)",
+      "sidewalk": "Dedicated pedestrian sidewalk presence (both, left, right, separate, none, unmapped)",
+      "crossing": "Pedestrian road crossing points (traffic_signals, marked, unmarked, uncontrolled)",
+      "tactile_paving": "Tactile ground indicators for visually impaired pedestrians",
+      "wheelchair": "Physical accessibility classification for mobility devices"
+    },
+    "limitations": [
+      "Footpath survey completeness varies by neighborhood and municipal ward.",
+      "Unmapped sidewalk tags denote absence of survey data, NOT physical absence of walking space.",
+      "Curb-cut ramp slopes and surface smoothness are not comprehensively surveyed."
+    ]
+  },
+  {
+    "id": "ds-osm-lighting",
+    "name": "OpenStreetMap Way Lighting & Luminaire Assets",
+    "sourceOrganisation": "OpenStreetMap Contributors",
+    "url": "https://overpass-turbo.eu/",
+    "licence": "Open Database License (ODbL) 1.0",
+    "geographicCoverage": "Bengaluru Pilot Study Area (Ward 143 / South End / Lalbagh / Jayanagar)",
+    "collectionPeriod": "Continuous crowd-mapped spatial vector extract",
+    "importedAt": "2026-10-28T09:41:14Z",
+    "lastUpdated": "2026-10-28T09:41:14Z",
+    "recordCount": 1672,
+    "status": "active",
+    "attributeDefinitions": {
+      "lit": "Street lighting tag on network ways (yes, no, 24/7, dusk-dawn, unmapped)",
+      "highway=street_lamp": "Physical streetlight pole/lamp node asset"
+    },
+    "limitations": [
+      "Only ~4% of street segments in the pilot area have explicit lit tags (1,618 lit, 54 unlit).",
+      "Missing lit tags represent unmapped survey gaps; uncertainty is preserved via neutral prior R_unknown=0.50.",
+      "A mapped lamp object does not guarantee electrical grid power or operational bulb functionality.",
+      "Vegetation canopy and building shadows may attenuate ground illuminance."
+    ]
+  },
+  {
+    "id": "ds-osm-facilities",
+    "name": "OpenStreetMap Civic Safety & Emergency Assistance POIs",
+    "sourceOrganisation": "OpenStreetMap Contributors",
+    "url": "https://overpass-turbo.eu/",
+    "licence": "Open Database License (ODbL) 1.0",
+    "geographicCoverage": "Bengaluru Pilot Study Area",
+    "collectionPeriod": "Curated spatial directory (Verified October 2026)",
+    "importedAt": "2026-10-28T09:41:14Z",
+    "lastUpdated": "2026-10-28T09:41:14Z",
+    "recordCount": 35,
+    "status": "active",
+    "attributeDefinitions": {
+      "amenity=police": "Police stations, police aid posts, and commissionerate outposts",
+      "amenity=hospital": "Hospitals, emergency trauma care centres, and public clinics",
+      "amenity=pharmacy": "Pharmacies and medical retail (including 24/7 locations)"
+    },
+    "limitations": [
+      "Operating hours, emergency desk staffing, and immediate dispatch readiness are unverified in OSM.",
+      "Physical proximity does not guarantee immediate emergency response."
+    ]
+  },
+  {
+    "id": "ds-ncrb-crime-stats",
+    "name": "NCRB Crime in India Official Statistics (Bengaluru Urban)",
+    "sourceOrganisation": "National Crime Records Bureau (NCRB), Ministry of Home Affairs, Government of India",
+    "url": "https://ncrb.gov.in/en/crime-in-india-table-addtional-table-and-chapter-contents",
+    "licence": "Government Open Data License - India (GODL-India)",
+    "geographicCoverage": "Bengaluru Metropolitan Police Commissionerate (District Level)",
+    "collectionPeriod": "2022 Calendar Year (Latest published annual compilation)",
+    "importedAt": "2026-11-12T12:16:38.828154+00:00",
+    "lastUpdated": "2023-12-01T00:00:00Z",
+    "recordCount": 4,
+    "status": "active",
+    "attributeDefinitions": {
+      "totalIpcCrimes": "Total IPC registered offenses (24,198 cases, rate 286.6/100k)",
+      "violentCrimes": "Murder, attempt to murder, grievous assault (1,932 cases, rate 22.9/100k)",
+      "crimesAgainstWomen": "Assault on women, harassment, domestic cruelty (3,124 cases, rate 37.0/100k)",
+      "propertyOffenses": "Theft, robbery, burglary (12,845 cases, rate 152.1/100k)"
+    },
+    "limitations": [
+      "Aggregate district-level statistics cannot be distributed across individual streets without severe spatial misrepresentation.",
+      "Route-level incident coordinates are not openly published by Indian authorities.",
+      "Zero records in a loaded dataset does NOT imply zero crime on a walking route."
+    ]
+  },
+  {
+    "id": "ds-safepath-community",
+    "name": "SafePath Moderated Community Environmental Observations",
+    "sourceOrganisation": "SafePath Finder Community Contributors (Walkers of Bengaluru)",
+    "url": "https://safepath.local/api/v1/reports",
+    "licence": "Open Database License (ODbL) / CC BY-SA 4.0",
+    "geographicCoverage": "Bengaluru Pilot Walking Corridor",
+    "collectionPeriod": "Continuous crowdsourced queue with 4-state moderation",
+    "importedAt": "2026-11-12T12:16:38.828172+00:00",
+    "lastUpdated": "2026-11-12T12:16:38.828175+00:00",
+    "recordCount": 312,
+    "status": "active",
+    "attributeDefinitions": {
+      "dog_encounter": "Street dog encounters (sighting, pack/group, aggressive, bite)",
+      "lighting_concern": "Broken luminaires, dark alleyways, malfunctioning feeder pillars",
+      "hazard": "Footpath construction obstructions, missing manhole covers, unsafe crossings",
+      "harassment": "Suspicious behavior, verbal harassment reports (anonymized)"
+    },
+    "limitations": [
+      "Crowdsourced reporting exhibits voluntary response bias and geographic clustering.",
+      "Zero reports on a street does NOT establish that the corridor is safe or hazard-free.",
+      "All personal identifying information is strictly stripped prior to public availability."
+    ]
+  },
+  {
+    "id": "ds-bbmp-luminaire-registry",
+    "name": "BBMP Municipal Luminaire Asset Inventory (Public Request)",
+    "sourceOrganisation": "Bruhat Bengaluru Mahanagara Palike (BBMP) Electrical / Streetlighting Dept",
+    "url": "https://bbmp.karnataka.gov.in/",
+    "licence": "Proprietary / Public Downloadable Dataset NOT Published",
+    "geographicCoverage": "BBMP Metropolitan Wards 1-198",
+    "collectionPeriod": "PPP Streetlight Project (Shapoorji Pallonji / SMC Consortium)",
+    "importedAt": null,
+    "lastUpdated": null,
+    "recordCount": 0,
+    "status": "unavailable",
+    "attributeDefinitions": {
+      "luminaire_id": "Physical lamp pole asset barcode/ID (Unacquired)",
+      "wattage": "LED luminaire power rating (Unacquired)",
+      "feeder_status": "Feeder pillar automation telemetry (Unacquired)"
+    },
+    "limitations": [
+      "INVESTIGATION OUTCOME: BBMP does not publish a publicly downloadable machine-readable luminaire database under an open license.",
+      "SafePath Finder strictly refuses to fabricate synthetic municipal luminaire records.",
+      "Status is honestly classified as UNAVAILABLE; lighting evidence relies solely on OpenStreetMap and verified community observations."
+    ]
+  }
+]

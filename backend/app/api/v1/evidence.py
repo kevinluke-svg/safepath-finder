@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.schemas.evidence import (
+    EvidenceSourceListResponse,
+    EvidenceSourceResponse,
     RouteEvidenceResponse,
     EvidenceObservationListResponse,
     EvidenceObservationResponse,
@@ -25,6 +27,7 @@ from app.models.evidence import StreetSegment, EvidenceObservation
 from app.services.evidence_service import (
     get_route_evidence_service,
     query_evidence_observations_service,
+    get_map_layers_bundle,
 )
 from app.geospatial.study_area import StudyArea
 from app.geospatial.crime_processor import CrimeProcessor
@@ -285,3 +288,54 @@ def get_study_area_coverage_summary(
             "Mapped streetlights are not guaranteed to be functioning or turned on during nighttime journeys."
         ]
     )
+
+
+@router.get("/evidence/map-layers")
+def get_map_layers(db: Session = Depends(get_db)):
+    """
+    Returns an aggregated GeoJSON/JSON bundle of all independently toggleable map layers:
+    - Street lighting classifications (lit, unlit, conflicting, unmapped)
+    - Street dog encounters (sighting, group, aggressive, bite)
+    - Community hazard observations (moderated)
+    - Verified assistance facilities (police, hospitals, 24/7 pharmacies)
+    - Public landmarks & transit hubs
+    - Pedestrian infrastructure & crossings
+    - Historical crime incident density hotspots
+    Includes comprehensive legends distinguishing actual mapped data, community reports,
+    inferred values, and unknown information.
+    """
+    study_area = StudyArea.from_settings()
+    return get_map_layers_bundle(db=db, study_area=study_area)
+
+
+@router.get("/evidence/sources", response_model=EvidenceSourceListResponse)
+def get_evidence_dataset_sources(db: Session = Depends(get_db)) -> EvidenceSourceListResponse:
+    """
+    Returns the comprehensive registry of open datasets utilized across SafePath Finder,
+    including provenance, licensing, coverage, collection period, and epistemological limitations.
+    """
+    sources = db.query(EvidenceSource).all()
+    items = []
+    for s in sources:
+        items.append(
+            EvidenceSourceResponse(
+                id=s.id,
+                name=s.name,
+                type=s.type,
+                coverage=s.coverage,
+                refreshFrequency=s.refresh_frequency,
+                lastIngested=s.last_ingested,
+                recordsCount=s.records_count,
+                status=s.status,
+                staleWarning=s.stale_warning,
+                notes=s.notes,
+                sourceOrganisation=getattr(s, "source_organisation", "") or "",
+                url=getattr(s, "url", "") or "",
+                licence=getattr(s, "licence", "") or "Open Database License (ODbL) 1.0",
+                collectionPeriod=getattr(s, "collection_period", "") or "",
+                lastUpdated=getattr(s, "last_updated", None),
+                attributeDefinitions=getattr(s, "attribute_definitions", {}) or {},
+                limitations=getattr(s, "limitations", []) or []
+            )
+        )
+    return EvidenceSourceListResponse(items=items, total=len(items))

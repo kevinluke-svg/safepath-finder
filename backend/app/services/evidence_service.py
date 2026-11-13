@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.orm import Session
-from app.models.evidence import StreetSegment, EvidenceSource
+from app.models.evidence import StreetSegment, EvidenceSource, EvidenceObservation
 from app.schemas.evidence import RouteEvidenceResponse, SegmentResponse
 
 DEFAULT_SEGMENTS: Dict[str, List[Dict[str, Any]]] = {
@@ -191,4 +191,229 @@ def query_evidence_observations_service(
         for r in records
     ]
     return items, total
+
+
+def get_map_layers_bundle(db: Session, study_area: Optional[Any] = None) -> Dict[str, Any]:
+    """
+    Compiles an aggregated, high-performance GeoJSON/JSON bundle of all independently
+    controllable map layers, distinguishing actual mapped data, community reports,
+    inferred/estimated values, and unknown information.
+    """
+    from app.models.report import CommunityReport
+    from app.geospatial.facilities_adapter import VERIFIED_PILOT_FACILITIES
+
+    # 1. Facilities and Landmarks (Verified pilot corridor data)
+    assistance_list = []
+    landmarks_list = []
+    for fac in VERIFIED_PILOT_FACILITIES:
+        lat = fac.get("lat") or fac.get("latitude")
+        lon = fac.get("lon") or fac.get("longitude")
+        ftype = fac.get("facility_type", "civic")
+        is_asst = fac.get("is_assistance", False)
+        item = {
+            "id": fac.get("id"),
+            "name": fac.get("name"),
+            "category": ftype,
+            "latitude": lat,
+            "longitude": lon,
+            "isAssistance": is_asst,
+            "source": "OpenStreetMap contributors (verified)",
+            "limitations": "Operating hours, desk staffing, and immediate response readiness are unverified in real time."
+        }
+        if is_asst:
+            assistance_list.append(item)
+        else:
+            landmarks_list.append(item)
+
+    # 2. Dog Encounter Reports
+    dog_reports_db = db.query(CommunityReport).filter(
+        CommunityReport.category.in_(["dog_sighting", "dog_group", "dog_aggressive", "dog_bite"]),
+        CommunityReport.status != "rejected",
+        CommunityReport.latitude.isnot(None),
+        CommunityReport.longitude.isnot(None)
+    ).all()
+    dogs_list = [
+        {
+            "id": r.id,
+            "category": r.category,
+            "categoryLabel": r.category_label,
+            "description": r.description,
+            "location": r.location,
+            "latitude": r.latitude,
+            "longitude": r.longitude,
+            "dogCount": r.dog_count,
+            "isAggressive": r.is_aggressive,
+            "encounterTime": r.encounter_time.isoformat() if r.encounter_time else None,
+            "corroborations": r.corroborations,
+            "outdatedFlags": getattr(r, "outdated_flags", 0),
+            "status": r.status,
+            "sourceType": "community_report",
+            "confidence": getattr(r, "location_confidence", "user_pinned")
+        }
+        for r in dog_reports_db
+    ]
+
+    # 3. Approved Community Hazard Reports
+    comm_reports_db = db.query(CommunityReport).filter(
+        CommunityReport.status == "approved",
+        ~CommunityReport.category.in_(["dog_sighting", "dog_group", "dog_aggressive", "dog_bite"]),
+        CommunityReport.latitude.isnot(None),
+        CommunityReport.longitude.isnot(None)
+    ).all()
+    community_list = [
+        {
+            "id": r.id,
+            "category": r.category,
+            "categoryLabel": r.category_label,
+            "description": r.description,
+            "location": r.location,
+            "latitude": r.latitude,
+            "longitude": r.longitude,
+            "corroborations": r.corroborations,
+            "outdatedFlags": getattr(r, "outdated_flags", 0),
+            "createdAt": r.created_at.isoformat() if r.created_at else None,
+            "sourceType": "community_report",
+            "confidence": "community_corroborated" if r.corroborations > 1 else "moderator_approved"
+        }
+        for r in comm_reports_db
+    ]
+
+    # 4. Street Lighting and Infrastructure Segments
+    segments_db = db.query(StreetSegment).all()
+    lighting_list = []
+    infra_list = []
+    if segments_db:
+        for s in segments_db:
+            geom = s.geometry or []
+            if len(geom) >= 2:
+                # Lighting overlay line
+                lighting_list.append({
+                    "id": s.id,
+                    "streetName": s.street_name,
+                    "litStatus": s.lit_status,  # lit, unlit, conflicting, unmapped
+                    "lengthMeters": s.length_meters,
+                    "geometry": geom,
+                    "coverage": s.coverage,
+                    "evidenceCoverage": 0.85 if s.coverage == "adequate" else (0.50 if s.coverage == "limited" else 0.20),
+                    "source": s.source
+                })
+                # Infrastructure points/lines
+                infra_list.append({
+                    "id": s.id,
+                    "streetName": s.street_name,
+                    "sidewalkStatus": getattr(s, "sidewalk_status", "unmapped"),
+                    "crossingStatus": getattr(s, "crossing_status", "unmapped"),
+                    "crossingDifficulty": getattr(s, "crossing_difficulty", "unknown"),
+                    "hasTactilePaving": getattr(s, "has_tactile_paving", None),
+                    "geometry": geom,
+                    "lengthMeters": s.length_meters
+                })
+    else:
+        # Fallback to default route corridor segments
+        for seg in DEFAULT_SEGMENTS.get("route-evidence", []):
+            geom = seg.get("geometry", [])
+            lighting_list.append({
+                "id": seg.get("id"),
+                "streetName": seg.get("streetName"),
+                "litStatus": "lit" if seg.get("coverage") == "adequate" else "unmapped",
+                "lengthMeters": 400.0,
+                "geometry": geom,
+                "evidenceCoverage": 0.85 if seg.get("coverage") == "adequate" else 0.20,
+                "source": seg.get("source")
+            })
+
+    # 5. Crime Clusters / Hotspots
+    crime_obs_db = db.query(EvidenceObservation).filter(
+        EvidenceObservation.category == "crime",
+        EvidenceObservation.latitude.isnot(None),
+        EvidenceObservation.longitude.isnot(None)
+    ).all()
+    crime_list = [
+        {
+            "id": c.id,
+            "category": c.subcategory or "historical_incident",
+            "latitude": c.latitude,
+            "longitude": c.longitude,
+            "severity": c.severity,
+            "observedAt": c.observed_at.isoformat() if c.observed_at else None,
+            "source": c.source_attribution or "Official Police Records",
+            "disclaimer": "Historical recorded incident density; not a predictive probability of future crime."
+        }
+        for c in crime_obs_db
+    ]
+
+    return {
+        "studyArea": {
+            "name": getattr(study_area, "name", "Bengaluru Pilot Corridor"),
+            "bbox": [12.9200, 77.5700, 12.9850, 77.6200]
+        },
+        "safetyDisclaimer": "SafePath Finder GIS visualization. Evidence layers depict recorded municipal infrastructure and community observations. Absence of mapped reports does not guarantee safety. SafePath is NOT an emergency service and does NOT dispatch police or emergency responders.",
+        "layers": {
+            "facilities": assistance_list,
+            "landmarks": landmarks_list,
+            "dogs": dogs_list,
+            "community": community_list,
+            "lighting": lighting_list,
+            "infrastructure": infra_list,
+            "crime": crime_list
+        },
+        "legends": {
+            "mappedData": [
+                "Municipal street lamp registries (BBMP)",
+                "OpenStreetMap verified ways and pedestrian crossings",
+                "Emergency assistance facilities (Police and Hospital coordinates)"
+            ],
+            "communityReports": [
+                "Citizen submitted observations",
+                "Street dog sighting and encounter reports",
+                "Corroborated infrastructure and crossing issues"
+            ],
+            "inferredValues": [
+                "Model prior risk assumptions when evidence is absent",
+                "Commercial vitality estimates during daytime/evening periods"
+            ],
+            "unknownInfo": [
+                "Unmapped street lighting conditions (preserved as modeling uncertainty)",
+                "Streets lacking documented footpaths or tactile paving",
+                "Absence of reports does not indicate zero hazard"
+            ],
+            "lighting": {
+                "provenance": "actual_mapped_and_corroborated",
+                "disclaimer": "Streetlights are modeled as active based on OpenStreetMap tags and community observations; real-time operational status is not monitored.",
+                "categories": [
+                    {"label": "Verified Lit", "color": "#16a34a", "dash": "solid", "state": "mapped"},
+                    {"label": "Verified Unlit", "color": "#ea580c", "dash": "solid", "state": "mapped"},
+                    {"label": "Conflicting Reports", "color": "#9333ea", "dash": "5,5", "state": "conflicting"},
+                    {"label": "Unmapped Lighting", "color": "#94a3b8", "dash": "3,4", "state": "unknown"}
+                ]
+            },
+            "dogs": {
+                "provenance": "community_reports",
+                "disclaimer": "Observations submitted by local pedestrians; absence of reports does not guarantee no dogs are present.",
+                "categories": [
+                    {"icon": "paw", "label": "Calm Sighting", "type": "informational"},
+                    {"icon": "pack", "label": "Group / Pack", "type": "moderate"},
+                    {"icon": "warning", "label": "Aggressive Encounter", "type": "warning"},
+                    {"icon": "shield-alert", "label": "Bite Incident", "type": "danger"}
+                ]
+            },
+            "community": {
+                "provenance": "community_reports",
+                "disclaimer": "Reports verified through moderation and multi-account corroboration. Individual consensus is not scientific proof."
+            },
+            "facilities": {
+                "provenance": "actual_mapped",
+                "disclaimer": "Verified physical presence of police stations and hospitals. Proximity to assistance provides resilience but is NOT proof of low crime."
+            },
+            "infrastructure": {
+                "provenance": "actual_mapped",
+                "disclaimer": "Sidewalk documentation on OpenStreetMap is incomplete; unmapped streets reflect survey gaps, not verified missing footpaths."
+            },
+            "crime": {
+                "provenance": "historical_police_dataset",
+                "disclaimer": "Aggregated historical incident records; non-predictive."
+            }
+        }
+    }
+
 

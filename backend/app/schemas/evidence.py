@@ -58,8 +58,15 @@ class EvidenceSourceResponse(BaseModel):
     status: str
     staleWarning: bool
     notes: str
+    sourceOrganisation: Optional[str] = Field(default="", alias="source_organisation")
+    url: Optional[str] = ""
+    licence: Optional[str] = "Open Database License (ODbL) 1.0"
+    collectionPeriod: Optional[str] = Field(default="", alias="collection_period")
+    lastUpdated: Optional[datetime] = Field(default=None, alias="last_updated")
+    attributeDefinitions: Optional[Dict[str, Any]] = Field(default_factory=dict, alias="attribute_definitions")
+    limitations: Optional[List[str]] = Field(default_factory=list)
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class EvidenceSourceListResponse(BaseModel):

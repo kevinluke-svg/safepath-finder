@@ -103,7 +103,7 @@ class LightingProcessor:
                 lit_status = "lit"
                 data_state = "present"
                 confidence = "high"
-                notes = f"Explicit affirmative lighting verified via OpenStreetMap way tag: lit={osm_lit}."
+                notes = f"Mapped as lit via OpenStreetMap way tag: lit={osm_lit}. (Cartographic tag; not field-verified operational)."
 
         elif osm_lit in self.LIT_NEGATIVE:
             if has_affirmative_report or associated_lamp_count >= 2:
@@ -119,7 +119,7 @@ class LightingProcessor:
                 lit_status = "unlit"
                 data_state = "present"
                 confidence = "high"
-                notes = f"Explicit negative lighting verified via OpenStreetMap way tag: lit={osm_lit}."
+                notes = f"Mapped as unlit via OpenStreetMap way tag: lit={osm_lit}."
 
         else:
             # Missing or unmapped OSM tag
@@ -140,7 +140,7 @@ class LightingProcessor:
                 data_state = "missing"
                 confidence = "low"
                 notes = (
-                    "Lighting data is completely unmapped on OpenStreetMap. "
+                    "Unknown/unmapped on OpenStreetMap. "
                     "SafePath Finder preserves uncertainty; this segment is NOT assumed to be dark."
                 )
                 limitations.append(
